@@ -1,0 +1,37 @@
+{
+  "comment": "A made-up mini translation for the Bible page's stub (scripture routes in routes/bible.mjs). Book names are real; every verse is invented.",
+  "books": [
+    { "key": "GEN", "name": "Genesis", "testament": "old", "chapters": [8, 6, 7] },
+    { "key": "PSA", "name": "Psalms", "testament": "old", "chapters": [6, 8, 5, 7, 9, 6, 8, 5, 7, 6, 9, 8, 6, 7, 5, 8, 6, 9, 7, 6, 8, 7, 6, 9, 8, 6, 7, 5, 8, 6] },
+    { "key": "JHN", "name": "John", "testament": "new", "chapters": [9, 7, 18, 10] }
+  ],
+  "phrases": [
+    "The lantern keeper walked the quiet road at dawn",
+    "and the orchard gate stood open to every traveller",
+    "A small boat rested where the river bends toward the hills",
+    "the bread was shared at the long table in the evening",
+    "Snow settled on the roofs of the harbour town",
+    "and the children sang beside the old stone well",
+    "The weaver counted the threads and found none missing",
+    "a bright star hung over the sleeping valley",
+    "The gardener planted cedar seeds along the northern wall",
+    "and the bells rang twice when the morning came",
+    "Wind moved over the barley fields like a slow tide",
+    "the shepherd's lamp burned steady through the long night"
+  ],
+  "verses": {
+    "PSA 23": [
+      "The lantern keeper guards the quiet road; no traveller goes without a light.",
+      "He sets a table in the green meadow and fills the clay jars by the slow stream.",
+      "He mends the torn sail and steers the small boat home along the straight channel.",
+      "Even when fog lies thick in the low valley I am not afraid, for the keeper's lamp is near; his staff and his lantern steady me.",
+      "He lays out bread before the long winter and pours warm cider until the cup runs over.",
+      "Kindness will walk beside me through every season, and I will rest in the keeper's house as long as the lamps are lit."
+    ],
+    "JHN 3": {
+      "16": "The weaver gave her finest cloth to the whole village, so that no one who came to her door would go cold in winter.",
+      "17": "She did not come to count their faults but to mend what was torn.",
+      "18": "Whoever takes the cloth is kept warm; whoever turns it away stays in the cold of their own choosing."
+    }
+  }
+}

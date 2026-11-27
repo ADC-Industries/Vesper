@@ -1,0 +1,5 @@
+# The vesper system user (systemd-sysusers): runs the server, owns /var/lib/vesper.
+u vesper - "Vesper presentation server" /var/lib/vesper /usr/sbin/nologin
+m vesper render
+m vesper video
+m vesper audio

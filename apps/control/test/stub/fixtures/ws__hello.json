@@ -1,0 +1,9 @@
+{
+  "type": "hello",
+  "server": {
+    "id": "ef405d09-d621-4bc9-8846-beefcf530b86",
+    "name": "Booth A",
+    "version": "0.1.0",
+    "protocolVersion": 1
+  }
+}

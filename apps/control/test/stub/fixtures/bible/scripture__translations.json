@@ -1,0 +1,21 @@
+[
+  {
+    "id": "TST",
+    "abbreviation": "TST",
+    "name": "Test Translation (synthetic)",
+    "language": "en",
+    "license": "Made up for tests",
+    "origin": "bundled",
+    "books": 3
+  },
+  {
+    "id": "SYN",
+    "abbreviation": "SYN",
+    "name": "Synthetic Sample Version",
+    "language": "en",
+    "license": "Made up for tests",
+    "attribution": "Synthetic Sample Version text is invented for Oriel's screenshots.",
+    "origin": "local",
+    "books": 3
+  }
+]

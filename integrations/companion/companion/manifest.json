@@ -1,0 +1,22 @@
+{
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"id": "vesper-server",
+	"name": "vesper-server",
+	"shortname": "vesper",
+	"description": "Vesper church presentation server: slides, playlists, clear, looks, timers, messages, props, macros and audio",
+	"version": "0.1.0",
+	"license": "MIT OR Apache-2.0",
+	"repository": "",
+	"bugs": "",
+	"maintainers": [{ "name": "Vesper" }],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../src/main.js"
+	},
+	"manufacturer": "Vesper",
+	"products": ["Vesper"],
+	"keywords": ["presentation", "lyrics", "church", "worship", "slides"]
+}

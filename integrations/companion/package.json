@@ -1,0 +1,22 @@
+{
+  "name": "companion-module-vesper-server",
+  "version": "0.1.0",
+  "description": "Bitfocus Companion module for Vesper, the church presentation server",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.8"
+  },
+  "dependencies": {
+    "@companion-module/base": "1.13.6",
+    "ws": "8.22.1"
+  },
+  "overrides": {
+    "colord": "2.10.0"
+  }
+}

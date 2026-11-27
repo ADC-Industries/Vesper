@@ -1,0 +1,36 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    # The vesper user and its groups (render, video, audio).
+    systemd-sysusers /usr/lib/sysusers.d/vesper.conf
+    # The data folder (systemd also creates it on start: StateDirectory=vesper; the server
+    # creates portable/ in an empty one itself).
+    install -d -o vesper -g vesper -m 0750 /var/lib/vesper /var/lib/vesper/portable
+fi
+
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ]; then
+    # Enabled on first install (was-enabled is true for a new unit), so a network-only box
+    # serves after every boot with nothing to set up; an admin's disable is kept on upgrades.
+    deb-systemd-helper unmask vesper.service >/dev/null || true
+    # `apt remove` masks both units (postrm); a reinstall must unmask the display unit too, or
+    # a display box stays dark (unmask removes only the masks deb-systemd-helper made itself).
+    deb-systemd-helper unmask vesper-display.service >/dev/null || true
+    if deb-systemd-helper --quiet was-enabled vesper.service; then
+        deb-systemd-helper enable vesper.service >/dev/null || true
+    else
+        deb-systemd-helper update-state vesper.service >/dev/null || true
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemctl --system daemon-reload >/dev/null || true
+        if [ -n "$2" ]; then action=restart; else action=start; fi
+        # A display box runs vesper-display.service instead (it conflicts with this one).
+        if systemctl --quiet is-enabled vesper-display.service 2>/dev/null; then
+            deb-systemd-invoke "$action" vesper-display.service >/dev/null || true
+        else
+            deb-systemd-invoke "$action" vesper.service >/dev/null || true
+        fi
+    fi
+fi
+
+exit 0

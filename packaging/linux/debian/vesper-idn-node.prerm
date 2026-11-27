@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# The IDN Node's service, when it runs this package's copy (the Launcher installed it for a
+# display box, or an admin with `idn-node install`), is removed with the package: its unit
+# would point at a program that is gone. `idn-node uninstall` keeps the machine's IDN state
+# (/var/lib/idn-node: its key and site membership). Upgrades leave it alone.
+if [ "$1" = remove ] && [ -f /etc/systemd/system/idn-node.service ] \
+    && grep -q '^ExecStart=/usr/lib/vesper-idn-node/' /etc/systemd/system/idn-node.service; then
+    /usr/lib/vesper-idn-node/idn-node uninstall >/dev/null 2>&1 || true
+fi
+
+exit 0

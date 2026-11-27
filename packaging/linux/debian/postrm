@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+if [ -d /run/systemd/system ]; then
+    systemctl --system daemon-reload >/dev/null || true
+fi
+
+if [ "$1" = "remove" ]; then
+    deb-systemd-helper mask vesper.service >/dev/null || true
+    deb-systemd-helper mask vesper-display.service >/dev/null || true
+fi
+
+if [ "$1" = "purge" ]; then
+    deb-systemd-helper purge vesper.service vesper-display.service >/dev/null || true
+    deb-systemd-helper unmask vesper.service >/dev/null || true
+    deb-systemd-helper unmask vesper-display.service >/dev/null || true
+    # The church's data stays: /var/lib/vesper holds its libraries, media and settings.
+    # Delete it by hand once it is backed up elsewhere. The cache can go.
+    rm -rf /var/cache/vesper
+    echo "vesper: purged; the data folder /var/lib/vesper and the vesper user are kept." >&2
+fi
+
+exit 0

@@ -1,0 +1,10 @@
+{
+  "name": "Booth A",
+  "version": "0.1.0",
+  "os": "Ubuntu 24.04.1 LTS",
+  "cpu": "Example CPU 8-Core",
+  "cpus": 16,
+  "gpu": "Example GPU (Vulkan)",
+  "uptimeSeconds": 273720,
+  "products": ["Vesper", "Codex", "Site Manager"]
+}

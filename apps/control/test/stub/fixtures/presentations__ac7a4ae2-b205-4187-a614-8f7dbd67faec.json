@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 2,
+  "id": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+  "name": "Morning Lantern",
+  "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+  "sections": [
+    {
+      "id": "7c831aec-2831-4e23-b81a-15e98a56acb9",
+      "name": "Verse 1",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "e8c237de-4404-4cea-9e83-8618efa84bd2",
+          "elements": [
+            {
+              "id": "7e994816-d732-47da-af34-7e54d3b1f733",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Wake the sleepy valley now"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Carry light across the plain"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "821649b0-3ef7-45e0-99a0-db357c99d41f",
+          "elements": [
+            {
+              "id": "017f965b-cca6-4452-acb4-ad4b8a092105",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Every window, every door"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Opens wide to greet the day"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "72381928-ea11-44a4-8258-a460b48da94a",
+      "name": "Chorus",
+      "color": {
+        "r": 0.12156863,
+        "g": 0.61960787,
+        "b": 0.5568628
+      },
+      "slides": [
+        {
+          "id": "ef3839d3-f89e-4056-a4d0-5e2f0688990b",
+          "elements": [
+            {
+              "id": "b761c17d-8fae-40db-b318-20afbf674e99",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Hold the lantern high"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Let it fill the sky"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "d5e77620-cc0c-4007-b183-fb2f75cd6c20",
+          "elements": [
+            {
+              "id": "0f2dd7ed-a973-4712-b1a4-c6131168e0eb",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "We will sing until the dawn"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Lifts the shadows from the field"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "31a1733a-ca87-4802-802f-b10274e2a36b",
+      "name": "Verse 2",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "5d9cf6df-678d-4357-8ff4-529069c9348b",
+          "elements": [
+            {
+              "id": "e74828c7-f12f-4df0-b520-66b6f60ca2f7",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Through the orchard, past the mill"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Footsteps gather on the hill"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "1cb229c3-7eae-4a42-a45b-a313329d173a",
+      "name": "Bridge",
+      "color": {
+        "r": 0.72156864,
+        "g": 0.27058825,
+        "b": 0.41960785
+      },
+      "slides": [
+        {
+          "id": "71b7950a-e8b6-499e-b84c-8e2025e33b5c",
+          "elements": [
+            {
+              "id": "d82dde54-9fa4-4239-9709-973e85838833",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Brighter, brighter"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Climbing ever higher"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "34f019d0-b6d7-4762-925c-c94621e72b24",
+      "name": "Ending",
+      "color": {
+        "r": 0.47843137,
+        "g": 0.35686275,
+        "b": 0.8392157
+      },
+      "slides": [
+        {
+          "id": "f6fd75f2-3101-47d0-b1af-6a35e96e1376",
+          "elements": [
+            {
+              "id": "1b231506-dffc-43dd-a77f-c3dc5d778602",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Hold the lantern high"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-11-23T14:02:26Z",
+  "modifiedAt": "2026-11-23T14:02:26Z"
+}

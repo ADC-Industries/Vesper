@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# An upgrade replaces the programs; a Node service running this package's copy restarts on
+# the new one. (A new install sets nothing up: the Launcher installs the Node's service when
+# the machine becomes a display box, or an admin runs `idn-node install`.)
+if [ "$1" = "configure" ] && [ -n "$2" ] && [ -d /run/systemd/system ] \
+    && [ -f /etc/systemd/system/idn-node.service ] \
+    && grep -q '^ExecStart=/usr/lib/vesper-idn-node/' /etc/systemd/system/idn-node.service; then
+    systemctl try-restart idn-node.service >/dev/null 2>&1 || true
+fi
+
+exit 0

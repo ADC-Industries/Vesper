@@ -1,0 +1,66 @@
+{
+  "families": [
+    {
+      "family": "Inter",
+      "faces": [
+        {
+          "weight": 400,
+          "italic": false,
+          "postscriptName": "Inter-Regular"
+        },
+        {
+          "weight": 700,
+          "italic": false,
+          "postscriptName": "Inter-Bold"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans",
+      "faces": [
+        {
+          "weight": 400,
+          "italic": false,
+          "postscriptName": "NotoSans-Regular"
+        },
+        {
+          "weight": 700,
+          "italic": false,
+          "postscriptName": "NotoSans-Bold"
+        }
+      ]
+    },
+    {
+      "family": "Noto Serif",
+      "faces": [
+        {
+          "weight": 400,
+          "italic": false,
+          "postscriptName": "NotoSerif-Regular"
+        },
+        {
+          "weight": 700,
+          "italic": false,
+          "postscriptName": "NotoSerif-Bold"
+        }
+      ]
+    },
+    {
+      "family": "DejaVu Sans",
+      "faces": [
+        {
+          "weight": 400,
+          "italic": false,
+          "postscriptName": "DejaVuSans-Regular"
+        },
+        {
+          "weight": 700,
+          "italic": false,
+          "postscriptName": "DejaVuSans-Bold"
+        }
+      ]
+    }
+  ],
+  "substitutions": [],
+  "fallbackFamily": "DejaVu Sans"
+}

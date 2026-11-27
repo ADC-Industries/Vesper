@@ -1,0 +1,54 @@
+# Church ProPresenter backup — private data, never commit
+/ProPresentor/
+
+# Rust
+/target/
+# The ProPresenter 7 schemas pro-import builds from, downloaded by
+# scripts/fetch-propresenter-proto.sh (inside /target/ already; named for clarity)
+/target/propresenter-proto/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Local data folders created by the server during development
+/data/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Third-party SDKs (licence forbids redistribution) — never commit
+/vendor/
+
+# Tauri build output
+/apps/control/src-tauri/target/
+
+# Third-party UI reference screenshots (not ours to redistribute)
+/reference/
+
+# Local archives (may contain transcripts with private church data)
+/*.zip
+
+# Agent worktrees (Claude Code)
+/.claude/worktrees/
+
+# Packaging: downloads (pinned third-party builds) and built packages
+/packaging/downloads/
+/packaging/out/
+
+# Soak runs (vesper-soak: data folders, logs, CSVs)
+/soak-runs/
+
+# Release signing: only public keys (packaging/keys/*.pub) are committed; private keys never
+*.key
+/minisign/
+
+# Local screenshot runs (npm run shots -- shots-<name>) and their logs
+/shots-*/
+/shots-*.log
+*.log
+
+# Personal, machine-local instructions for coding agents
+CLAUDE.local.md

@@ -1,0 +1,32 @@
+# Tauri v2 shell of the control app. Excluded from the root Cargo workspace because it needs
+# the WebKitGTK system libraries to build (see ../README.md, "Desktop app (Tauri)").
+[package]
+name = "oriel"
+version = "0.1.0"
+description = "Operator control app (desktop shell)"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+# The Oriel .deb takes its Maintainer field from here.
+authors = ["Dylan Charpentier <info@adcnetwork.org>"]
+publish = false
+
+[lib]
+name = "oriel_lib"
+# Desktop only: the shell's binary links this as an rlib. (The template's "cdylib"/"staticlib"
+# are for Android/iOS; a cdylib can't even link for windows-gnu, it exports too many symbols.)
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+# Wire types and mDNS discovery (the same crate the server uses).
+protocol = { path = "../../../crates/protocol", features = ["discover"] }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

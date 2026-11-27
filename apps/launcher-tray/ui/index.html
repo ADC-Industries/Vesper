@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- Shown until the Launcher service answers; the tray app then opens the service's own page
+     (http://127.0.0.1:5556/). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vesper Launcher</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: #121317; color: #ecedf1; font: 13px/1.45 "Inter", "Segoe UI", system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; box-sizing: border-box; }
+  h1 { font-size: 15px; font-weight: 600; margin: 12px 0 4px; }
+  p { color: #8a8e9a; margin: 0; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: #6a6e78; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div>
+  <div class="dot"></div>
+  <h1>Waiting for the Vesper Launcher service</h1>
+  <p>It runs in the background on this machine and starts with it. If this stays, restart the
+  computer, or ask whoever looks after your church's Vesper setup.</p>
+</div>
+</body>
+</html>

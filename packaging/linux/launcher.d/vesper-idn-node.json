@@ -1,0 +1,6 @@
+{
+  "product": "vesper-idn-node",
+  "name": "IDN Node (bundled)",
+  "install": { "kind": "deb", "units": ["idn-node.service"] },
+  "healthUrl": ""
+}

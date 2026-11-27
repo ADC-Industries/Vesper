@@ -1,0 +1,20 @@
+{
+  "adapter": "Example GPU (Vulkan)",
+  "uptimeSeconds": 3600,
+  "fonts": [
+    {
+      "family": "Arial",
+      "weight": 400,
+      "italic": false,
+      "usedFamily": "DejaVu Sans",
+      "match": "fallback",
+      "syntheticBold": false,
+      "syntheticItalic": false,
+      "uses": 4
+    }
+  ],
+  "missingMedia": [],
+  "unsupported": [],
+  "notes": [],
+  "loadIssues": []
+}

@@ -1,0 +1,202 @@
+{
+  "revision": 37,
+  "state": {
+    "layers": {
+      "videoInput": null,
+      "media": null,
+      "foreground": null,
+      "slide": {
+        "presentation": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+        "presentationName": "Morning Lantern",
+        "slide": "821649b0-3ef7-45e0-99a0-db357c99d41f",
+        "slideIndex": 1,
+        "section": "7c831aec-2831-4e23-b81a-15e98a56acb9",
+        "sectionName": "Verse 1",
+        "playlist": {
+          "playlist": "1aaf3f97-b5d5-4367-a9fa-9c0378c6b4fd",
+          "item": "bc3e071b-1b35-43a1-bd73-b1b66f0a02a1"
+        }
+      },
+      "announcements": null,
+      "props": [],
+      "messages": [],
+      "audio": null
+    },
+    "restorableLayers": [],
+    "activeLook": null,
+    "transitions": [],
+    "transport": null,
+    "timers": [
+      {
+        "id": "a58d3d0d-1156-47fb-ae58-4f2045faa7c8",
+        "name": "Service Countdown",
+        "kind": {
+          "type": "countdown",
+          "seconds": 600
+        },
+        "allowOverrun": false,
+        "state": "running",
+        "currentSeconds": 600,
+        "display": "10:00",
+        "warningSeconds": null
+      },
+      {
+        "id": "e92deef1-ddf5-424b-acf0-2e337bd73f97",
+        "name": "Sermon",
+        "kind": {
+          "type": "elapsed"
+        },
+        "allowOverrun": false,
+        "state": "stopped",
+        "currentSeconds": 0,
+        "display": "00:00",
+        "warningSeconds": null
+      },
+      {
+        "id": "cf65cbe7-da2f-40bc-aeba-3a7915811c6b",
+        "name": "Doors Open",
+        "kind": {
+          "type": "countdownToTime",
+          "secondsAfterMidnight": 36900
+        },
+        "allowOverrun": false,
+        "state": "stopped",
+        "currentSeconds": 4351.887,
+        "display": "1:12:32",
+        "warningSeconds": null
+      }
+    ],
+    "stageLayouts": [],
+    "stageScreens": [
+      {
+        "screen": "6703b24e-2f82-47a2-9986-b8043c7fb592",
+        "name": "Stage Monitor",
+        "layout": "2f58a822-39e8-448f-ac51-24f8bba2a44f",
+        "layoutName": "Band"
+      }
+    ],
+    "stageMessage": null,
+    "screens": [
+      {
+        "id": "3b86def4-cbe1-439e-87d7-c837c454913c",
+        "name": "Main Projector",
+        "role": "audience",
+        "enabled": true,
+        "width": 1920,
+        "height": 1080,
+        "frameRate": {
+          "num": 30,
+          "den": 1
+        },
+        "measuredFps": 31,
+        "lastRenderMs": 13.5,
+        "testPattern": null,
+        "outputs": [
+          {
+            "name": "IDN: Main Projector",
+            "kind": "idn",
+            "origin": "binding",
+            "binding": "1fbb94ae-6672-4670-a875-7793aea5a3f8",
+            "width": 1920,
+            "height": 1080,
+            "frameRate": {
+              "num": 30,
+              "den": 1
+            },
+            "delayFrames": 0,
+            "status": "ok",
+            "detail": null,
+            "framesSent": 46,
+            "framesDropped": 0,
+            "errors": 0,
+            "embedAudio": false,
+            "audioDb": 0,
+            "audioMuted": false
+          }
+        ]
+      },
+      {
+        "id": "6703b24e-2f82-47a2-9986-b8043c7fb592",
+        "name": "Stage Monitor",
+        "role": "stage",
+        "enabled": true,
+        "width": 1920,
+        "height": 1080,
+        "frameRate": {
+          "num": 30,
+          "den": 1
+        },
+        "measuredFps": 31,
+        "lastRenderMs": 100.9,
+        "testPattern": null,
+        "outputs": []
+      }
+    ],
+    "screensEnabled": {
+      "audience": true,
+      "stage": true
+    },
+    "identify": false,
+    "options": {
+      "continuousPlaylist": true
+    },
+    "cursor": {
+      "presentation": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+      "presentationName": "Morning Lantern",
+      "slide": "ef3839d3-f89e-4056-a4d0-5e2f0688990b",
+      "slideIndex": 2,
+      "section": "72381928-ea11-44a4-8258-a460b48da94a",
+      "sectionName": "Chorus",
+      "playlist": {
+        "playlist": "1aaf3f97-b5d5-4367-a9fa-9c0378c6b4fd",
+        "item": "bc3e071b-1b35-43a1-bd73-b1b66f0a02a1"
+      }
+    },
+    "diagnostics": {
+      "fontSubstitutions": 0,
+      "fontMisses": 1,
+      "missingMedia": 0,
+      "unsupported": 0,
+      "notes": 0,
+      "loadIssues": 0,
+      "skippedActions": 0
+    },
+    "audio": {
+      "device": "",
+      "outputState": "null",
+      "detail": null,
+      "masterDb": 0,
+      "muted": false,
+      "levels": [
+        -60,
+        -60
+      ],
+      "xruns": 0,
+      "layers": {
+        "audio": {
+          "db": 0,
+          "muted": false
+        },
+        "media": {
+          "db": 0,
+          "muted": false
+        },
+        "slide": {
+          "db": 0,
+          "muted": false
+        },
+        "videoInput": {
+          "db": 0,
+          "muted": false
+        }
+      },
+      "shuffle": false,
+      "repeat": false,
+      "playlist": null
+    },
+    "clockFormat": {
+      "use24Hour": false,
+      "seconds": false
+    }
+  }
+}

@@ -1,0 +1,24 @@
+FFmpeg in Vesper for Windows
+============================
+
+Vesper for Windows uses FFmpeg (https://ffmpeg.org/) to decode video and sound. FFmpeg's
+libraries are shipped unmodified, as separate DLLs next to vesper.exe (avcodec, avformat,
+avutil, swresample, swscale, avdevice, avfilter), and Vesper links to them dynamically. You
+may replace them with your own compatible build of the same FFmpeg major version.
+
+This is an LGPL-only build (no GPL or non-free components): FFmpeg is licensed under the GNU
+Lesser General Public License version 2.1 or later; this build is distributed under the
+LGPL version 3 (FFMPEG-LICENSE.txt).
+
+Build used: BtbN FFmpeg-Builds, "win64-lgpl-shared-8.1", autobuild-2026-10-31-12-59
+  ffmpeg-n8.1.3-27-g8dca1586f4-win64-lgpl-shared-8.1.zip
+  https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-10-31-12-59
+
+Source code:
+  FFmpeg at the commit the build names (n8.1.3-27-g8dca1586f4):
+    https://git.ffmpeg.org/ffmpeg.git, commit 8dca1586f4
+    (mirror: https://github.com/FFmpeg/FFmpeg/commit/8dca1586f4)
+  The build scripts and the third-party libraries' versions:
+    https://github.com/BtbN/FFmpeg-Builds
+On request we provide this source code for at least three years from the date of
+distribution; ask the people who gave you this installer.

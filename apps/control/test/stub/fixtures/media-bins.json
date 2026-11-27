@@ -1,0 +1,45 @@
+[
+  {
+    "id": null,
+    "name": "Visuals",
+    "path": [
+      "Visuals"
+    ],
+    "kind": "folder",
+    "browser": "media",
+    "itemCount": 9,
+    "children": [
+      {
+        "id": "cd5a7e35-9e3b-4b47-9567-391000d56d9c",
+        "name": "Backgrounds",
+        "path": [
+          "Visuals"
+        ],
+        "kind": "manual",
+        "browser": "media",
+        "itemCount": 7,
+        "children": []
+      },
+      {
+        "id": "47836b1b-3716-4ceb-a8a9-2d5781c66f75",
+        "name": "Motion Loops",
+        "path": [
+          "Visuals"
+        ],
+        "kind": "manual",
+        "browser": "media",
+        "itemCount": 2,
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "87257370-176f-48cf-ace1-0a61d722da8f",
+    "name": "Walk-in Music",
+    "path": [],
+    "kind": "manual",
+    "browser": "audio",
+    "itemCount": 3,
+    "children": []
+  }
+]

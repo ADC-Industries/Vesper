@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 2,
+  "id": "5a6cab40-8854-44e7-940c-fa780a2a1fc0",
+  "name": "Evening Ember",
+  "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+  "sections": [
+    {
+      "id": "2ddb64b8-763a-4866-9d8d-34d7c79eae2e",
+      "name": "Verse 1",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "054bdf4c-8845-4216-80d8-49cb811abebb",
+          "elements": [
+            {
+              "id": "5bc71c97-5429-4909-95d8-a0b12a9db002",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Gather near the ember glow"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Stories old and stories slow"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "8741a1f6-458c-4078-a34e-6aa0c45f3a5f",
+      "name": "Chorus",
+      "color": {
+        "r": 0.12156863,
+        "g": 0.61960787,
+        "b": 0.5568628
+      },
+      "slides": [
+        {
+          "id": "60e63684-fad1-41f9-aea3-83043be84fd2",
+          "elements": [
+            {
+              "id": "95996598-df13-4c08-8299-0b19aadfa372",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Rest now, rest now"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "The stars keep watch above"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-11-23T14:02:26Z",
+  "modifiedAt": "2026-11-23T14:02:26Z"
+}

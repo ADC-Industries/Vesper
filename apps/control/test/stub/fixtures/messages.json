@@ -1,0 +1,18 @@
+[
+  {
+    "revision": "a363045c857050ac",
+    "schemaVersion": 2,
+    "id": "b839ee0c-15dd-4cbd-8a45-ca3a8943abd0",
+    "name": "Parking",
+    "sortKey": "V",
+    "text": "The car with plate ${plate} is blocking the gate"
+  },
+  {
+    "revision": "2bac747326b06906",
+    "schemaVersion": 2,
+    "id": "f8741105-b173-4963-b5e2-ed4b75a3c4b7",
+    "name": "Nursery",
+    "sortKey": "k",
+    "text": "Nursery: parent of ${number}, please come to the nursery"
+  }
+]

@@ -1,0 +1,13 @@
+[package]
+name = "rtf"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Panic-free parser for the Cocoa-style RTF that ProPresenter stores in text elements"
+
+[dependencies]
+
+[dev-dependencies]
+# Only used by examples/rtf_corpus.rs to read the census JSON dumps.
+base64 = "0.22.1"
+serde_json = "1.0.154"

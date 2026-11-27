@@ -1,0 +1,27 @@
+[
+  {
+    "id": "e92f4cca-bb10-4817-9cca-8c545d33226d",
+    "name": "Sundays",
+    "kind": "folder",
+    "purpose": null,
+    "itemCount": 0,
+    "children": [
+      {
+        "id": "1aaf3f97-b5d5-4367-a9fa-9c0378c6b4fd",
+        "name": "Sunday Morning",
+        "kind": "playlist",
+        "purpose": "service",
+        "itemCount": 6,
+        "children": []
+      }
+    ]
+  },
+  {
+    "id": "19e825ed-ac39-4c3b-876e-9eb593dcbc77",
+    "name": "Midweek Evening",
+    "kind": "playlist",
+    "purpose": "service",
+    "itemCount": 0,
+    "children": []
+  }
+]

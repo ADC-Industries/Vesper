@@ -1,0 +1,22 @@
+[package]
+name = "pro-import"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+model = { version = "0.1.0", path = "../model" }
+prost = "0.14.4"
+prost-reflect = { version = "0.16.5", features = ["serde"] }
+rtf = { version = "0.1.0", path = "../rtf" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
+uuid = { version = "1.28.0", features = ["serde", "v5"] }
+walkdir = "2.5.0"
+
+[build-dependencies]
+anyhow = "1.0.104"
+prost = "0.14.4"
+prost-build = "0.14.4"
+protox = "0.10.0"

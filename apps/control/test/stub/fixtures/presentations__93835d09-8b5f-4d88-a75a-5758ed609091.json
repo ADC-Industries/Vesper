@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 2,
+  "id": "93835d09-8b5f-4d88-a75a-5758ed609091",
+  "name": "River of Kindness",
+  "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+  "sections": [
+    {
+      "id": "19599560-a0b6-4904-93f1-2219ed9d8cfb",
+      "name": "Verse 1",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "84f7af67-336d-4261-85c7-cfcc8a595101",
+          "elements": [
+            {
+              "id": "b6d5ecbf-5432-4232-9e98-ed876d5b5dc7",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Down by the river of kindness"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Stones turn smooth in the stream"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "26a30d69-581d-4cc7-9549-56b145285f3c",
+          "elements": [
+            {
+              "id": "96156f51-fee8-463e-86a1-4993704c8832",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Water that never runs empty"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Carries the weary along"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eb5dc023-b105-46d4-bc02-4bd6a2f334ca",
+      "name": "Chorus",
+      "color": {
+        "r": 0.12156863,
+        "g": 0.61960787,
+        "b": 0.5568628
+      },
+      "slides": [
+        {
+          "id": "3aca0cdf-4c9a-45f2-b6fb-f48389654b6c",
+          "elements": [
+            {
+              "id": "e2d4f1c4-f5ba-4f37-8f68-0b55410f2ea8",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Flow on, flow on"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Over the meadow and home"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b0413a20-f082-4496-81e5-718a843e0567",
+      "name": "Verse 2",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "b98093e1-cab9-4cbd-a5cc-a9b38d6c78ca",
+          "elements": [
+            {
+              "id": "64ea8c51-5c8d-458e-9fc1-168504fd9152",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Bring every bucket and pitcher"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "There is enough for us all"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-11-23T14:02:26Z",
+  "modifiedAt": "2026-11-23T14:02:26Z"
+}

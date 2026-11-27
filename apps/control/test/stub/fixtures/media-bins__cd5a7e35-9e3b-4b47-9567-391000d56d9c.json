@@ -1,0 +1,74 @@
+{
+  "id": "cd5a7e35-9e3b-4b47-9567-391000d56d9c",
+  "name": "Backgrounds",
+  "path": [
+    "Visuals"
+  ],
+  "kind": "manual",
+  "browser": "media",
+  "items": [
+    {
+      "id": "b78fb573-448d-479d-bef4-e88bdf356c96",
+      "name": "Blue Dawn",
+      "kind": "image",
+      "asset": "39b7d1a4-11f4-45b5-9d59-e92a937e4d0d",
+      "availability": "online",
+      "enabled": true,
+      "duration": null
+    },
+    {
+      "id": "2757908e-cb8a-476f-8f17-7545369381ae",
+      "name": "Soft Bokeh",
+      "kind": "image",
+      "asset": "491c6c0c-8467-4c95-96de-8d9c6a6e321f",
+      "availability": "online",
+      "enabled": true,
+      "duration": null
+    },
+    {
+      "id": "587f121d-931e-4d47-a3ee-14699a19e7cf",
+      "name": "Meadow Haze",
+      "kind": "image",
+      "asset": "475a2593-3872-4369-8303-285d0d84eca0",
+      "availability": "online",
+      "enabled": true,
+      "duration": null
+    },
+    {
+      "id": "24449fce-2982-4f3a-ab15-ba2eca579da2",
+      "name": "Slow Clouds",
+      "kind": "video",
+      "asset": "164aa983-68dc-452a-8ede-009c44a2bdd6",
+      "availability": "online",
+      "enabled": true,
+      "duration": 24.0
+    },
+    {
+      "id": "6db11ae5-7f2a-496f-ae60-10f38867aff0",
+      "name": "Ocean Shimmer",
+      "kind": "video",
+      "asset": "dd6f949a-9b0d-4a3a-b565-de85e13d6526",
+      "availability": "online",
+      "enabled": true,
+      "duration": 31.5
+    },
+    {
+      "id": "02725414-c1ce-485c-bf73-0a30d7d8ac05",
+      "name": "Warm Glow",
+      "kind": "image",
+      "asset": "09b2f4bd-ee05-48eb-99e1-e01061ed8ea7",
+      "availability": "online",
+      "enabled": true,
+      "duration": null
+    },
+    {
+      "id": "bb980066-a10e-461a-9f41-b2ce8b2a9d79",
+      "name": "Old Countdown",
+      "kind": "video",
+      "asset": "a81ee563-18d0-4ab6-97df-7c35b2ce6cb7",
+      "availability": "missing",
+      "enabled": true,
+      "duration": 60.0
+    }
+  ]
+}

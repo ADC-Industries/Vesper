@@ -1,0 +1,101 @@
+[package]
+name = "vesper-server"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Vesper, the headless render/playout server: show state, render loops, outputs, control API (REST + WebSocket), pairing, mDNS"
+
+[lib]
+name = "vesper_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vesper"
+path = "src/main.rs"
+
+[dependencies]
+vesper-core = { path = "../vesper-core" }
+vesper-site = { path = "../vesper-site" }
+vesper-codex = { path = "../vesper-codex" }
+vesper-scripture = { path = "../vesper-scripture" }
+# The update channel checks packages with the Launcher's signature code (G10).
+vesper-launcher = { path = "../vesper-launcher" }
+base64 = "0.22.1"
+model = { path = "../model" }
+protocol = { path = "../protocol", features = ["discover"] }
+render = { path = "../render" }
+output = { path = "../output" }
+media = { path = "../media" }
+audio = { path = "../audio" }
+# The site's Site Manager (run by `vesper-site`) and the IDN library's types the Codex uses.
+idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+# Live captions (docs/CAPTIONS-PLAN.md): whisper.cpp on the CPU. Without the crate's `gpu`
+# feature: its Vulkan backend would be a second Vulkan instance in the server process (see the
+# render crate's docs on the loader race) and needs the Vulkan SDK to build on Windows.
+idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }
+# Recording and streaming (`gateways`): IDN's FFmpeg gateway (the system FFmpeg the media
+# crate links anyway; also the live-source tests' H.264 test source).
+idn-ffmpeg = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }
+# Mosaic's checked HTTPS to display boxes (`mosaic::client`): IDN's `lan_client_config` is a
+# rustls client config; the same rustls (and features) the IDN library uses.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+# Signage's data feeds (`signage::feeds`): IDN's feed reader (Google Sheets, CSV/TSV, JSON,
+# XML/RSS); it turns on the IDN library's HTTP client, which also reads the weather.
+idn-feeds = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+anyhow = "1.0.104"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "signal", "sync", "net", "time", "fs"] }
+axum = { version = "0.8.9", features = ["ws"] }
+tower = { version = "0.5.3", features = ["util"] }
+tower-http = { version = "0.7.1", features = ["fs", "cors"] }
+futures-util = { version = "0.3.34", default-features = false, features = ["sink", "std"] }
+sha2 = "0.11.1"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+clap = { version = "4.6.7", features = ["derive"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
+uuid = { version = "1.28.0", features = ["serde", "v4", "v5"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+# PowerPoint / Keynote / Google Slides import into the Codex (`codex::pptx`).
+pptx-import = { path = "../pptx-import" }
+# Machine translation of second-language slides (`translate`): OPUS-MT models on candle.
+vesper-translate = { path = "../vesper-translate" }
+
+# The server's Rust allocator (`heap`, feature `mimalloc`, on by default): mimalloc gives freed
+# memory back to the system, where glibc's arenas kept it (docs/SOAK-PLAN.md). MIT; Linux and
+# Windows. `extended` for its process numbers in `/server/stats`.
+mimalloc = { version = "0.1.52", optional = true, default-features = false }
+libmimalloc-sys = { version = "0.1.49", optional = true, features = ["extended"] }
+
+# OS error codes (display outputs).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.191"
+
+# Display outputs: DRM connectors and their modes (the same crate wgpu's DRM surfaces use).
+[target.'cfg(target_os = "linux")'.dependencies]
+drm = "0.15"
+
+[target.'cfg(any(windows, target_os = "linux"))'.dependencies]
+# Display outputs as windows (Windows, Linux desktops): one event loop thread, a window per
+# output, presented from the renderer's shared GPU device. X11 and Wayland are loaded at run
+# time (dlopen), so a headless box needs neither.
+winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita-notitle"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_RemoteDesktop", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+
+[dev-dependencies]
+tokio-tungstenite = "0.30.0"
+
+# The two memory pieces are independent (docs/SOAK-PLAN.md, lane M): drop one from `default`
+# to build without it.
+[features]
+default = ["glibc-tuning"]
+# mimalloc as the `vesper` binary's global allocator for Rust (see `heap`). Off by default (owner,
+# 2026-11-26): it raised resident memory 100–150 MB and the growth was on the C side anyway.
+mimalloc = ["dep:mimalloc", "dep:libmimalloc-sys"]
+# glibc's malloc tuned for the C libraries: fixed mmap threshold, at most 4 arenas
+# (`heap::tune_glibc`; Linux with glibc only, nothing elsewhere).
+glibc-tuning = []

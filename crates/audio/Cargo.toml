@@ -1,0 +1,12 @@
+[package]
+name = "audio"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Audio bus: mixer (gain, fades, channel routing, soft clip, meters), the engine thread that drives the output device (a sound card through idn-audio, or a null output that keeps time), program-audio taps for network outputs"
+
+[dependencies]
+anyhow = "1.0.104"
+log = "0.4.34"
+# IDN's sound cards (WASAPI / ALSA / CoreAudio). No ASIO: that would fetch Steinberg's SDK.
+idn-audio = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }

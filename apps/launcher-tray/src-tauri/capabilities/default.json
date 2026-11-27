@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The window's own fallback page needs no Tauri command; the Launcher's page (http://127.0.0.1:5556/) gets none either.",
+  "windows": ["main"],
+  "permissions": []
+}

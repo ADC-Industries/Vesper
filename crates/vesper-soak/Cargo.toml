@@ -1,0 +1,28 @@
+[package]
+name = "vesper-soak"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Service-day soak harness: runs a release Vesper server with a synthetic library through a simulated Sunday on a loop and watches memory, files, threads, frame pacing, A/V sync, recording and WebSocket latency (docs/SOAK-PLAN.md)"
+publish = false
+
+[[bin]]
+name = "vesper-soak"
+path = "src/main.rs"
+
+[dependencies]
+model = { path = "../model" }
+# The synthetic camera (an IDN source) and the A/V probe (a verification receiver).
+output = { path = "../output" }
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+serde = "1.0.229"
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+image = { version = "0.25.10", default-features = false, features = ["png"] }
+# The operators' WebSocket clients (plain ws:// to the local server, blocking).
+tungstenite = { version = "0.30.0", default-features = false, features = ["handshake"] }
+
+[target.'cfg(unix)'.dependencies]
+# Ctrl-C / SIGTERM stop the run early with a summary (src/stop.rs).
+libc = "0.2.191"

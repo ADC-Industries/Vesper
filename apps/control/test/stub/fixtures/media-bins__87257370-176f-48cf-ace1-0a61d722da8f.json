@@ -1,0 +1,36 @@
+{
+  "id": "87257370-176f-48cf-ace1-0a61d722da8f",
+  "name": "Walk-in Music",
+  "path": [],
+  "kind": "manual",
+  "browser": "audio",
+  "items": [
+    {
+      "id": "b29e28c2-e384-4062-b0dd-0fce1b78e24f",
+      "name": "Gentle Piano Loop",
+      "kind": "audio",
+      "asset": "106ee9f3-d80a-4fab-b9ad-dc71bfc8be08",
+      "availability": "online",
+      "enabled": true,
+      "duration": 184.0
+    },
+    {
+      "id": "6538e40b-f9c3-4174-8461-95d2361c426b",
+      "name": "Acoustic Morning",
+      "kind": "audio",
+      "asset": "1d638e5e-ee5d-49dc-8dad-dcdf78553bd7",
+      "availability": "online",
+      "enabled": true,
+      "duration": 212.0
+    },
+    {
+      "id": "05158232-bcd6-4415-b12e-2e052abb6e73",
+      "name": "Quiet Strings",
+      "kind": "audio",
+      "asset": "8d93225b-6592-4e9f-b553-add6d7879e97",
+      "availability": "online",
+      "enabled": true,
+      "duration": 150.0
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "products": [
+    {
+      "product": "vesper-launcher",
+      "name": "Vesper Launcher",
+      "self": true,
+      "install": { "kind": "nsis", "task": "Vesper Launcher" },
+      "healthUrl": "http://127.0.0.1:5556/launcher/v1/version"
+    }
+  ]
+}

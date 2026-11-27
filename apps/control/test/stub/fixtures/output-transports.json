@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "idn",
+    "label": "IDN Open Protocol (compatible with NDI®)",
+    "supported": true,
+    "available": true,
+    "version": "0.3.1",
+    "status": "built in (IDN Open Protocol 0.3.1)",
+    "detail": "An open implementation compatible with NDI® (IDN Open Protocol 0.3.1), compiled into this server: no runtime to install. Its sources appear in the source list of compatible receivers. NDI® is a registered trademark of Vizrt NDI AB; this project is not affiliated with or endorsed by Vizrt."
+  },
+  {
+    "kind": "omt",
+    "label": "OMT",
+    "supported": true,
+    "available": true,
+    "version": "0.3.1",
+    "status": "built in (idn-omt 0.3.1)",
+    "detail": "Open Media Transport (open, royalty-free; vMix, OBS), compiled into this server with its VMX codec: no runtime to install. Its sources appear as \"HOST (name)\" in OMT receivers. Alpha and program audio are sent."
+  },
+  {
+    "kind": "display",
+    "label": "Display",
+    "supported": false,
+    "available": false,
+    "version": null,
+    "status": "not yet supported",
+    "detail": "Fullscreen outputs on attached monitors are not supported yet; they will also need a display server (this server runs without one)."
+  },
+  {
+    "kind": "sdi",
+    "label": "SDI",
+    "supported": false,
+    "available": false,
+    "version": null,
+    "status": "not yet supported",
+    "detail": "SDI cards (DeckLink) are planned for a later version."
+  }
+]

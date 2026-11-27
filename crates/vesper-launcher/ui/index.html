@@ -1,0 +1,473 @@
+<!doctype html>
+<!-- The Vesper Launcher's window (served by the Launcher's local API at http://127.0.0.1:5556/;
+     the tray app shows it): the products on this machine and the first-run wizard. One file, no
+     build step, nothing fetched from elsewhere. Colours, type and spacing are Oriel's design
+     tokens (apps/control/src/app.css). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vesper Launcher</title>
+<style>
+:root {
+  --surface-app: #121317; --surface-sunk: #15161a; --surface-panel: #1a1c21;
+  --surface-raised: #22252b; --surface-overlay: #2a2d35; --surface-well: #0b0c0f;
+  --line: #2c2f37; --line-strong: #3a3d46; --line-hover: #4a4e58;
+  --text-strong: #ffffff; --text: #ecedf1; --text-2: #c5c8d1; --text-label: #a3a7b3;
+  --text-meta: #8a8e9a; --text-disabled: #6a6e78;
+  --accent: #6e5ce6; --accent-hover: #7d6cf0; --accent-sel: #2f2a55; --accent-ring: #a99bff;
+  --accent-link: #c9c0ff;
+  --live: #f5a524; --live-soft: rgba(245, 165, 36, 0.16);
+  --ok: #5fcb82; --ok-text: #7fd39a; --ok-bg: #1e3326; --off: #6a6e78;
+  --danger: #f06b6b; --danger-text: #ff9c9c; --danger-soft: rgba(240, 107, 107, 0.14);
+  --r: 6px; --r-card: 8px;
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  --fs-xs: 11px; --fs-sm: 12px; --fs: 13px; --fs-md: 14px; --fs-lg: 17px;
+  --label-tracking: 0.08em; --control-h: 30px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--surface-app); color: var(--text); font: var(--fs)/1.45 var(--font); }
+button, input { font: inherit; color: inherit; }
+.app { display: flex; flex-direction: column; min-height: 100%; }
+header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--surface-panel); border-bottom: 1px solid var(--line); }
+header h1 { margin: 0; font-size: var(--fs-md); font-weight: 600; }
+header .sub { color: var(--text-meta); font-size: var(--fs-sm); }
+header .grow { flex: 1; min-width: 0; }
+.light { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--off); box-shadow: 0 0 0 3px rgba(255,255,255,0.04); }
+.light.ok { background: var(--ok); }
+.light.updating { background: var(--live); }
+.light.attention { background: var(--danger); }
+main { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.label { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-label); font-weight: 600; }
+.card { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px; }
+.product .top { display: flex; align-items: center; gap: 8px; }
+.product .name { font-weight: 600; font-size: var(--fs-md); flex: 1; min-width: 0; }
+.product .meta { color: var(--text-meta); font-size: var(--fs-sm); margin-top: 2px; }
+.product .meta.problem { color: var(--danger-text); }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 10px; font-size: var(--fs-xs); font-weight: 600; background: var(--surface-overlay); color: var(--text-2); white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--off); }
+.chip.running { background: var(--ok-bg); color: var(--ok-text); } .chip.running::before { background: var(--ok); }
+.chip.busy { background: var(--live-soft); color: var(--live); } .chip.busy::before { background: var(--live); }
+.chip.failed { background: var(--danger-soft); color: var(--danger-text); } .chip.failed::before { background: var(--danger); }
+.chip.update { background: var(--accent-sel); color: var(--accent-link); } .chip.update::before { background: var(--accent-ring); }
+.actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.btn { height: var(--control-h); padding: 0 12px; border-radius: var(--r); border: 1px solid var(--line-strong); background: var(--surface-overlay); cursor: pointer; font-weight: 500; }
+.btn:hover:not(:disabled) { border-color: var(--line-hover); }
+.btn:disabled { color: var(--text-disabled); cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--text-strong); }
+.btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn.primary:disabled { background: var(--accent-sel); border-color: var(--accent-sel); color: var(--text-meta); }
+.btn.quiet { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn:focus-visible, input:focus-visible, .role:focus-within { outline: 2px solid var(--accent-ring); outline-offset: 1px; }
+.site { display: flex; align-items: center; gap: 10px; }
+.site .txt { flex: 1; min-width: 0; }
+.site .t { font-weight: 600; }
+.site .s { color: var(--text-meta); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.site .s.problem, .problem { color: var(--danger-text); }
+footer { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); color: var(--text-meta); font-size: var(--fs-sm); }
+footer .grow { flex: 1; }
+.link { color: var(--accent-link); cursor: pointer; background: none; border: 0; padding: 0; }
+.link:hover { text-decoration: underline; }
+.logs { position: fixed; inset: 0; background: var(--surface-app); display: flex; flex-direction: column; }
+.logs header { justify-content: space-between; }
+.logs pre { flex: 1; margin: 0; padding: 12px 16px; overflow: auto; background: var(--surface-well); font: var(--fs-sm)/1.5 var(--mono); color: var(--text-2); white-space: pre-wrap; word-break: break-all; }
+.steps { display: flex; gap: 6px; padding: 12px 16px 0; }
+.step { flex: 1; display: flex; align-items: center; gap: 6px; color: var(--text-meta); font-size: var(--fs-sm); }
+.step .n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-strong); font-size: var(--fs-xs); font-weight: 600; flex: none; }
+.step.now { color: var(--text); } .step.now .n { background: var(--accent); border-color: var(--accent); color: var(--text-strong); }
+.step.done .n { background: var(--ok-bg); border-color: var(--ok-bg); color: var(--ok-text); }
+.wizard h2 { margin: 4px 0 2px; font-size: var(--fs-lg); font-weight: 600; }
+.wizard p { margin: 0; color: var(--text-2); }
+.wizard p.hint { color: var(--text-meta); font-size: var(--fs-sm); }
+.roles { display: flex; flex-direction: column; gap: 6px; }
+.role { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--r-card); cursor: pointer; }
+.role.on { border-color: var(--accent); background: var(--accent-sel); }
+.role.later { cursor: default; color: var(--text-disabled); }
+.role input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; flex: none; }
+.role .role-note { display: block; color: var(--text-meta); font-size: var(--fs-sm); }
+.role.on .role-note { color: var(--text-2); }
+.role .later-tag { margin-left: auto; font-size: var(--fs-xs); color: var(--text-meta); }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field input { height: 34px; padding: 0 10px; background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--r); }
+.field input::placeholder { color: var(--text-meta); }
+.field .hint { color: var(--text-meta); font-size: var(--fs-sm); }
+.found { display: flex; flex-wrap: wrap; gap: 6px; }
+.found .btn.on { border-color: var(--accent); background: var(--accent-sel); }
+.row { display: flex; gap: 8px; align-items: center; }
+.row .grow { flex: 1; }
+.wait { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 18px 8px; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--surface-overlay); border-top-color: var(--accent-ring); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.big-ok { width: 36px; height: 36px; border-radius: 50%; background: var(--ok-bg); color: var(--ok-text); display: grid; place-items: center; font-size: 20px; font-weight: 700; }
+.keyname { font-weight: 600; color: var(--text); }
+.err { color: var(--danger-text); font-size: var(--fs-sm); }
+.empty { color: var(--text-meta); text-align: center; padding: 20px; }
+.rolesteps { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.rolesteps li { display: flex; gap: 8px; align-items: baseline; font-size: var(--fs-sm); color: var(--text-2); }
+.rolesteps .mk { width: 14px; flex: none; text-align: center; font-weight: 700; color: var(--text-meta); }
+.rolesteps .done .mk { color: var(--ok-text); } .rolesteps .failed .mk { color: var(--danger-text); }
+.rolesteps .msg { display: block; color: var(--danger-text); }
+.rolesteps .skipped { color: var(--text-meta); }
+.diag main { gap: 12px; }
+.headline { display: flex; gap: 10px; align-items: center; }
+.headline .t { font-weight: 600; font-size: var(--fs-md); }
+.badge { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; flex: none; background: var(--surface-overlay); color: var(--text-2); }
+.badge.ok { background: var(--ok-bg); color: var(--ok-text); }
+.badge.warning { background: var(--live-soft); color: var(--live); }
+.badge.problem { background: var(--danger-soft); color: var(--danger-text); }
+.section .about { color: var(--text-meta); font-size: var(--fs-sm); margin: 2px 0 6px; }
+.section h3 { margin: 0; font-size: var(--fs); font-weight: 600; }
+.items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.items li { display: flex; gap: 8px; font-size: var(--fs-sm); color: var(--text-2); overflow-wrap: anywhere; }
+.items .mk { width: 14px; flex: none; text-align: center; font-weight: 700; }
+.items .ok .mk { color: var(--ok-text); } .items .warning .mk { color: var(--live); } .items .problem .mk { color: var(--danger-text); }
+.items .info { color: var(--text-meta); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: var(--fs-sm); }
+.kv .k { color: var(--text-label); } .kv .v { color: var(--text-2); overflow-wrap: anywhere; } .kv .v.problem { color: var(--danger-text); }
+details summary { cursor: pointer; color: var(--text-label); font-size: var(--fs-sm); }
+details pre { margin: 8px 0 0; padding: 10px; background: var(--surface-well); border-radius: var(--r); font: var(--fs-xs)/1.5 var(--mono); color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.copied { color: var(--ok-text); font-size: var(--fs-sm); }
+</style>
+</head>
+<body>
+<div class="app" id="app"><main><div class="empty">Starting…</div></main></div>
+<script>
+"use strict";
+// Same-origin calls to the Launcher's local API (it refuses other origins).
+const api = async (method, path, body) => {
+  const init = { method, headers: {} };
+  if (method !== "GET") { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body ?? {}); }
+  const r = await fetch("/launcher/v1" + path, init);
+  const text = await r.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!r.ok) throw new Error(data?.error?.message ?? `the Launcher answered ${r.status}`);
+  return data;
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const STATE = {
+  running: ["Running", "running"], stopped: ["Stopped", ""], starting: ["Starting", "busy"],
+  updating: ["Updating", "busy"], rollingBack: ["Rolling back", "busy"], failed: ["Not running", "failed"],
+};
+// What a role means on this machine (Mosaic: docs/MOSAIC-PLAN.md, option A).
+const ROLE_NOTE = {
+  presentation: "Runs the Vesper server: slides, media and outputs.",
+  display: "Shows the site's screens with the IDN Node's display service; no Vesper server here. Linux boxes run it from boot without a desktop; Windows PCs need to sign in automatically.",
+};
+const ROLE_DONE = { presentation: "Presentation server", display: "Display box" };
+const MARK = { done: "✓", failed: "✕", skipped: "–", pending: "·", ok: "✓", warning: "!", problem: "✕", info: "·" };
+const LIGHT = { ok: "All good", updating: "Working…", attention: "Needs attention" };
+
+let ov = null;            // the last overview
+let view = location.hash === "#diagnostics" ? "diagnostics" : "main";   // main | wizard | logs | diagnostics
+let diag = { data: null, running: false, error: "", copied: false };
+let wiz = { step: 1, roles: [], server: "", code: "", error: "", busy: false, dismissed: false };
+let found = null;         // Vesper servers on the network (null: not looked yet)
+
+async function lookForServers() {
+  found = "looking";
+  try { found = await api("GET", "/setup/servers"); } catch { found = []; }
+  if (view === "wizard" && wiz.step === 2) render();
+}
+let logs = { product: "", text: "" };
+const busy = {};          // product → what is under way from this window
+let note = "";            // a problem to show on the main view
+
+async function refresh() {
+  try {
+    ov = await api("GET", "/overview");
+    if (ov.setup.firstRun && view === "main" && !wiz.dismissed) openWizard();
+    if (view === "diagnostics" && !diag.data && !diag.running) runDiagnostics();
+  } catch (e) { note = "The Launcher service isn't answering: " + e.message; }
+  render();
+}
+
+function openWizard() {
+  view = "wizard";
+  const j = ov?.setup.join.state;
+  wiz = { ...wiz, step: j === "waiting" || j === "joined" ? 3 : 1, roles: [...(ov?.setup.roles ?? [])], code: "", error: "", busy: false };
+}
+
+function render() {
+  const el = document.getElementById("app");
+  if (view === "logs") { el.innerHTML = logsView(); return; }
+  if (view === "diagnostics") { el.innerHTML = diagView(); return; }
+  if (!ov) { el.innerHTML = `<main><div class="empty">${esc(note || "Starting…")}</div></main>`; return; }
+  const focus = document.activeElement?.id;   // keep what is being typed
+  el.innerHTML = view === "wizard" ? wizardView() : mainView();
+  const f = focus && document.getElementById(focus);
+  if (f) { f.focus(); if (f.value) f.setSelectionRange?.(f.value.length, f.value.length); }
+}
+
+function head(sub) {
+  const light = ov?.light ?? "";
+  return `<header><span class="light ${esc(light)}" title="${esc(LIGHT[light] ?? "")}"></span>
+    <div class="grow"><h1>Vesper Launcher</h1><div class="sub">${sub}</div></div></header>`;
+}
+
+function siteLine() {
+  const j = ov.setup.join;
+  if (j.state === "joined") {
+    const prob = ov.channel.problem;
+    const last = ov.channel.lastReport ? " · last report " + new Date(ov.channel.lastReport).toLocaleTimeString() : "";
+    return `<div class="card site"><div class="txt"><div class="t">In the site · ${esc(j.serverName || j.server)}</div>
+      <div class="s ${prob ? "problem" : ""}">${prob ? "Can't report to the site's server: " + esc(prob) : "Updates from " + esc(j.server) + esc(last)}</div></div></div>`;
+  }
+  if (j.state === "waiting") {
+    return `<div class="card site"><div class="txt"><div class="t">Waiting for approval</div><div class="s">An admin approves this machine in Oriel ▸ Site at ${esc(j.serverName || j.server)}</div></div>
+      <button class="btn" data-act="wizard">Open</button></div>`;
+  }
+  const server = ov.channel.server;
+  return `<div class="card site"><div class="txt"><div class="t">${server ? "Updates from " + esc(server) : "Not in a site"}</div>
+    <div class="s ${j.problem ? "problem" : ""}">${esc(j.problem ?? (server ? "Set in the Launcher's configuration file" : "Join the site to get updates from it"))}</div></div>
+    <button class="btn primary" data-act="wizard">Join the site</button></div>`;
+}
+
+// The machine's roles being made true (the Vesper server on or off, a display box's IDN Node).
+function rolesCard() {
+  const rs = ov.setup.roleStatus;
+  const run = rs?.run;
+  if (!run || (run.state === "done" && !run.notes?.length)) {
+    if (!rs?.applied?.length) return "";
+    return `<div class="card site"><div class="txt"><div class="t">Set up as: ${esc(rs.applied.map((r) => ROLE_DONE[r] ?? r).join(", "))}</div>
+      <div class="s">The Launcher keeps this machine's services as its role needs.</div></div></div>`;
+  }
+  const title = run.state === "applying" ? "Setting up this machine…" : run.state === "failed" ? "Setting up this machine didn't finish" : "Set up as: " + run.target.map((r) => ROLE_DONE[r] ?? r).join(", ");
+  const chip = run.state === "applying" ? `<span class="chip busy">Working</span>` : run.state === "failed" ? `<span class="chip failed">Tries again in a minute</span>` : `<span class="chip running">Done</span>`;
+  return `<div class="card"><div class="product"><div class="top"><div class="name">${esc(title)}</div>${chip}</div></div>
+    <ul class="rolesteps">${run.steps.map((st) => `<li class="${esc(st.state)}"><span class="mk">${MARK[st.state] ?? "·"}</span><span>${esc(st.label)}${st.state === "failed" && st.message ? `<span class="msg">${esc(st.message)}</span>` : ""}</span></li>`).join("")}</ul>
+    ${(run.notes ?? []).map((n) => `<div class="meta" style="margin-top:8px;color:var(--text-2)">${esc(n)}</div>`).join("")}</div>`;
+}
+
+function productCard(p) {
+  const [label, cls] = STATE[p.state] ?? [p.state, ""];
+  const avail = ov.available[p.product];
+  const doing = busy[p.product];
+  const lu = p.lastUpdate;
+  // Run by the system (its service or scheduled task): Launch works whatever version is known.
+  const system = (ov.kinds?.[p.product] ?? "dir") !== "dir";
+  let meta = p.version ? "Version " + esc(p.version) : system ? "Version not known yet" : "Not installed";
+  if (p.restarts) meta += ` · restarted ${p.restarts}×`;
+  let problem = "";
+  if (lu && lu.result !== "installed") problem = (lu.result === "rolledBack" ? `Update to ${esc(lu.to)} rolled back: ` : `Update to ${esc(lu.to)} failed: `) + esc(lu.message);
+  const running = ["running", "starting", "updating", "rollingBack"].includes(p.state);
+  const self = ov.kinds?.[p.product] === "self";
+  // A package of programs (the bundled IDN Node): updated, never launched or stopped.
+  const pkgOnly = ov.kinds?.[p.product] === "package";
+  return `<div class="card product" data-product="${esc(p.product)}">
+    <div class="top"><div class="name">${esc(p.name)}</div>
+      ${avail ? `<span class="chip update">Update available</span>` : ""}
+      <span class="chip ${doing ? "busy" : cls}">${esc(doing ?? label)}</span></div>
+    <div class="meta">${meta}</div>
+    ${problem ? `<div class="meta problem">${problem}</div>` : ""}
+    <div class="actions">
+      ${self || pkgOnly ? "" : `<button class="btn" data-act="start" ${running || doing || (!p.version && !system) ? "disabled" : ""}>Launch</button>
+      <button class="btn" data-act="stop" ${!running || doing ? "disabled" : ""}>Stop</button>`}
+      <button class="btn ${avail ? "primary" : ""}" data-act="update" ${!avail || doing ? "disabled" : ""}>${avail ? "Update to " + esc(avail) : p.version ? "Up to date" : "Update"}</button>
+      <button class="btn quiet" data-act="logs">Logs</button>
+    </div></div>`;
+}
+
+function mainView() {
+  const s = ov.status;
+  const roles = ov.setup.roles.map((r) => ov.setup.availableRoles.find((x) => x.id === r)?.name ?? r);
+  return head(`${esc(s.machineName)} · ${esc(roles.join(", ") || "no role chosen")}`) +
+    `<main>${note ? `<div class="err">${esc(note)}</div>` : ""}${siteLine()}${rolesCard()}
+      <div class="label">Products on this machine</div>
+      ${s.products.length ? s.products.map(productCard).join("") : `<div class="empty">No products are set up on this machine.</div>`}
+    </main>
+    <footer><button class="link" data-act="wizard">Set up this machine</button><button class="link" data-act="diagnostics">Diagnostics</button><span class="grow"></span><span>Launcher ${esc(s.launcherVersion)}</span></footer>`;
+}
+
+async function runDiagnostics() {
+  diag.running = true; diag.error = ""; diag.copied = false;
+  if (view === "diagnostics") render();
+  try { diag.data = await api("GET", "/diagnostics"); }
+  catch (e) { diag.error = e.message; }
+  finally { diag.running = false; }
+  if (view === "diagnostics") render();
+}
+
+function diagView() {
+  const d = diag.data;
+  const top = `<header><span class="light ${esc(ov?.light ?? "")}"></span><div class="grow"><h1>Diagnostics</h1>
+    <div class="sub">${esc(ov?.status.machineName ?? "")}${d ? " · checked " + esc(new Date(d.ranAt).toLocaleTimeString()) : ""}</div></div>
+    <button class="btn" data-act="diag-close">Close</button></header>`;
+  if (!d) {
+    return `<div class="app diag">${top}<main>${diag.error ? `<div class="err">${esc(diag.error)}</div>` : `<div class="wait"><div class="spinner"></div><p>Checking this machine and the network…</p><p class="hint">This takes a few seconds.</p></div>`}</main></div>`;
+  }
+  const doc = d.doctor;
+  const sections = doc.sections.map((s) => `<div class="card section"><h3>${esc(s.title)}</h3>
+    ${s.about ? `<div class="about">${esc(s.about)}</div>` : ""}
+    <ul class="items">${s.items.map((i) => `<li class="${esc(i.level)}"><span class="mk">${MARK[i.level] ?? "·"}</span><span>${esc(i.text)}</span></li>`).join("")}</ul></div>`).join("");
+  return `<div class="app diag">${top}<main>
+    <div class="card headline"><span class="badge ${esc(doc.level)}">${MARK[doc.level] ?? "?"}</span><div><div class="t">${esc(doc.headline)}</div>
+      ${doc.problem ? `<div class="meta problem">${esc(doc.problem)}</div>` : doc.summary ? `<div class="meta">IDN's network check: ${esc(doc.summary)}</div>` : ""}</div></div>
+    <div class="row"><button class="btn primary" data-act="diag-copy">Copy report</button><button class="btn" data-act="diag-run" ${diag.running ? "disabled" : ""}>${diag.running ? "Checking…" : "Check again"}</button>
+      <span class="grow"></span>${diag.copied ? `<span class="copied">Copied: paste it into your message to support.</span>` : ""}</div>
+    ${diag.error ? `<div class="err">${esc(diag.error)}</div>` : ""}
+    <div class="label">Network (IDN doctor)</div>${sections || `<div class="empty">${esc(doc.problem ?? "No results.")}</div>`}
+    <div class="label">This machine</div>
+    <div class="card kv">${d.launcher.map(([k, v, bad]) => `<span class="k">${esc(k)}</span><span class="v ${bad ? "problem" : ""}">${esc(v)}</span>`).join("")}</div>
+    ${doc.output ? `<details><summary>IDN doctor's own words</summary><pre>${esc(doc.output)}</pre></details>` : ""}
+  </main></div>`;
+}
+
+async function copyReport() {
+  const text = diag.data?.report ?? "";
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const t = document.createElement("textarea");
+    t.value = text; document.body.appendChild(t); t.select();
+    document.execCommand("copy"); t.remove();
+  }
+  diag.copied = true; render();
+}
+
+function logsView() {
+  const p = ov?.status.products.find((x) => x.product === logs.product);
+  return `<div class="logs"><header><h1>${esc(p?.name ?? logs.product)}: log</h1>
+    <div class="row"><button class="btn" data-act="logs-refresh">Refresh</button><button class="btn" data-act="logs-close">Close</button></div></header>
+    <pre id="logtext">${esc(logs.text || "(the log is empty)")}</pre></div>`;
+}
+
+function steps(n) {
+  const names = ["Role", "Join the site", "Approval"];
+  return `<div class="steps">${names.map((t, i) => `<div class="step ${i + 1 === n ? "now" : i + 1 < n ? "done" : ""}"><span class="n">${i + 1 < n ? "✓" : i + 1}</span>${t}</div>`).join("")}</div>`;
+}
+
+function wizardView() {
+  const j = ov.setup.join;
+  if (wiz.step === 3 && j.state === "notJoined") wiz.step = 2;
+  let body = "";
+  let n = wiz.step;
+  if (wiz.step === 1) {
+    body = `<h2>What does this machine do?</h2><p>Choose its role. You can change this later.</p>
+      <div class="roles">${ov.setup.availableRoles.map((r) => {
+        const on = wiz.roles.includes(r.id);
+        return r.available
+          ? `<label class="role ${on ? "on" : ""}"><input type="checkbox" data-role="${esc(r.id)}" ${on ? "checked" : ""}><span>${esc(r.name)}${ROLE_NOTE[r.id] ? `<span class="role-note">${esc(ROLE_NOTE[r.id])}</span>` : ""}</span></label>`
+          : `<div class="role later"><input type="checkbox" disabled>${esc(r.name)}<span class="later-tag">Later</span></div>`;
+      }).join("")}</div>
+      <div class="row"><span class="grow"></span><button class="btn primary" data-act="roles-next" ${wiz.roles.length ? "" : "disabled"}>Next</button></div>`;
+  } else if (wiz.step === 2) {
+    body = `<h2>Join the site</h2><p>The site's server is the Vesper server that runs the site. Its name or address is in Oriel ▸ Site.</p>
+      ${serversFound()}
+      <div class="field"><label class="label" for="server">Site's server</label><input id="server" placeholder="main-server.local or 192.0.2.10" value="${esc(wiz.server)}" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label class="label" for="code">Pairing code (optional)</label><input id="code" placeholder="6 digits" inputmode="numeric" value="${esc(wiz.code)}" autocomplete="off">
+        <span class="hint">With the code the site's server shows, this machine joins at once. Without it, an admin approves it in Oriel.</span></div>
+      ${wiz.error || j.problem ? `<div class="err">${esc(wiz.error || j.problem)}</div>` : ""}
+      <div class="row"><button class="btn quiet" data-act="back">Back</button><span class="grow"></span>
+        <button class="btn quiet" data-act="skip">Not now</button>
+        <button class="btn primary" data-act="join" ${wiz.busy || !wiz.server.trim() ? "disabled" : ""}>${wiz.busy ? "Joining…" : wiz.code.trim() ? "Join" : "Ask to join"}</button></div>`;
+  } else if (j.state === "waiting") {
+    body = `<div class="wait"><div class="spinner"></div><h2>Waiting for approval</h2>
+      <p>An admin approves <span class="keyname">Vesper Launcher – ${esc(ov.setup.machineName)}</span> in Oriel ▸ Site ▸ Pairings at ${esc(j.serverName || j.server)}.</p>
+      <p class="hint">This waits up to 10 minutes. You can close this window meanwhile.</p></div>
+      <div class="row"><span class="grow"></span><button class="btn" data-act="cancel">Cancel</button></div>`;
+  } else {
+    n = 4;
+    body = `<div class="wait"><div class="big-ok">✓</div><h2>This machine is in the site</h2>
+      <p>${esc(ov.setup.machineName)} reports to ${esc(j.serverName || j.server)} and gets its updates from there.</p></div>
+      <div class="row"><button class="link" data-act="leave">Leave the site here</button><span class="grow"></span><button class="btn primary" data-act="finish">Done</button></div>`;
+  }
+  return head(ov.setup.firstRun ? "Set up this machine" : "Set up " + esc(ov.setup.machineName)) + steps(n) + `<main class="wizard">${body}</main>`;
+}
+
+function serversFound() {
+  if (found === null) { lookForServers(); found = "looking"; }
+  if (found === "looking") return `<div class="field"><span class="label">On this network</span><span class="hint" style="color:var(--text-meta)">Looking for Vesper servers…</span></div>`;
+  if (!found.length) return "";
+  return `<div class="field"><span class="label">On this network</span><div class="found">${found.map((s) =>
+    `<button class="btn ${s.url === wiz.server ? "on" : ""}" data-act="pick" data-url="${esc(s.url)}">${esc(s.name)}</button>`).join("")}</div></div>`;
+}
+
+function patchJoinButton() {
+  const b = document.querySelector('[data-act="join"]');
+  if (b) { b.disabled = wiz.busy || !wiz.server.trim(); b.textContent = wiz.busy ? "Joining…" : wiz.code.trim() ? "Join" : "Ask to join"; }
+}
+document.addEventListener("input", (e) => {
+  if (e.target.id === "server") { wiz.server = e.target.value; wiz.error = ""; patchJoinButton(); }
+  if (e.target.id === "code") { wiz.code = e.target.value; patchJoinButton(); }
+});
+document.addEventListener("change", (e) => {
+  const r = e.target.dataset?.role;
+  if (r) {
+    // A display box runs the IDN Node's display service and no Vesper server: it is never also
+    // a presentation server (docs/MOSAIC-PLAN.md).
+    const apart = { presentation: "display", display: "presentation" }[r];
+    wiz.roles = e.target.checked ? [...new Set([...wiz.roles.filter((x) => x !== apart), r])] : wiz.roles.filter((x) => x !== r);
+    render();
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.target.id === "server" || e.target.id === "code")) document.querySelector('[data-act="join"]')?.click();
+  if (e.key === "Escape" && view === "logs") { view = "main"; render(); }
+});
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b || b.disabled) return;
+  const act = b.dataset.act;
+  const product = b.closest("[data-product]")?.dataset.product;
+  try {
+    note = "";
+    if (act === "wizard") { wiz.dismissed = false; openWizard(); }
+    else if (act === "roles-next") { await api("PUT", "/setup", { roles: wiz.roles }); wiz.step = ov.setup.join.state === "notJoined" ? 2 : 3; }
+    else if (act === "back") { wiz.step = 1; }
+    else if (act === "pick") { wiz.server = b.dataset.url; wiz.error = ""; render(); return; }
+    else if (act === "skip" || act === "finish") { await api("PUT", "/setup", { done: true }); view = "main"; wiz.dismissed = true; }
+    else if (act === "join") {
+      wiz.busy = true; wiz.error = ""; render();
+      try { await api("POST", "/setup/join", { server: wiz.server, code: wiz.code.trim() || null }); wiz.step = 3; }
+      catch (err) { wiz.error = err.message; }
+      finally { wiz.busy = false; }
+    }
+    else if (act === "cancel") { await api("DELETE", "/setup/join"); wiz.step = 2; }
+    else if (act === "leave") {
+      if (!confirm("Leave the site on this machine? It gets no updates from the site until it joins again. (An admin also revokes its key in Oriel ▸ Site ▸ API keys.)")) return;
+      await api("DELETE", "/setup/join"); wiz.step = 2;
+    }
+    else if (act === "start" || act === "stop") {
+      busy[product] = act === "start" ? "Starting" : "Stopping"; render();
+      try { await api("POST", `/products/${encodeURIComponent(product)}/${act}`); } finally { delete busy[product]; }
+    }
+    else if (act === "update") {
+      const version = ov.available[product];
+      busy[product] = "Updating"; render();
+      try {
+        const o = await api("POST", "/actions", { type: "update", product, version });
+        if (o.result !== "installed") note = o.message;
+      } finally { delete busy[product]; }
+    }
+    else if (act === "logs" || act === "logs-refresh") {
+      if (product) logs.product = product;
+      const r = await fetch(`/launcher/v1/products/${encodeURIComponent(logs.product)}/logs?lines=500`);
+      logs.text = await r.text();
+      view = "logs";
+      render();
+      const pre = document.getElementById("logtext");
+      if (pre) pre.scrollTop = pre.scrollHeight;
+      return;
+    }
+    else if (act === "logs-close") { view = "main"; }
+    else if (act === "diagnostics") { view = "diagnostics"; history.replaceState(null, "", "#diagnostics"); diag.data = null; runDiagnostics(); return; }
+    else if (act === "diag-run") { runDiagnostics(); return; }
+    else if (act === "diag-copy") { await copyReport(); return; }
+    else if (act === "diag-close") { view = "main"; history.replaceState(null, "", "#"); }
+  } catch (err) {
+    if (view === "wizard") wiz.error = err.message; else note = err.message;
+  }
+  await refresh();
+});
+
+refresh();
+setInterval(() => { if (view !== "logs" && view !== "diagnostics" && !wiz.busy) refresh(); }, 2000);
+// The tray's "Diagnostics" opens the window at #diagnostics.
+addEventListener("hashchange", () => {
+  if (location.hash === "#diagnostics" && view !== "diagnostics") { view = "diagnostics"; diag.data = null; runDiagnostics(); }
+});
+</script>
+</body>
+</html>

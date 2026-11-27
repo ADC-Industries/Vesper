@@ -1,0 +1,14 @@
+[
+  {
+    "name": "default",
+    "description": "Default output",
+    "available": true,
+    "channels": 2
+  },
+  {
+    "name": "hw:1,0",
+    "description": "USB Audio Interface",
+    "available": true,
+    "channels": 2
+  }
+]

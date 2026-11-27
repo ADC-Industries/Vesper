@@ -1,0 +1,28 @@
+# Vesper Launcher: installs, updates (signed packages, automatic rollback) and monitors the
+# Vesper products on this machine, and reports to the site's update channel
+# (docs/LAUNCHER-PLAN.md). Its local API and window: http://127.0.0.1:5556/ (this machine only).
+#
+# Settings: /etc/vesper/launcher.json. State (packages, manifest, the site's key):
+# /var/lib/vesper-launcher. Logs: journalctl -u vesper-launcher.
+[Unit]
+Description=Vesper Launcher
+Documentation=file:///usr/share/doc/vesper/PACKAGING.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+# Root: it installs packages (dpkg -i) and starts and stops the products' units.
+ExecStart=/usr/bin/vesper-launcher --config /etc/vesper/launcher.json
+StateDirectory=vesper-launcher
+StateDirectoryMode=0700
+Restart=on-failure
+RestartSec=5
+# An install it started (dpkg) finishes even when the Launcher itself stops or restarts
+# meanwhile; the Launcher finishes the update at its next start (docs/LAUNCHER-PLAN.md).
+KillMode=process
+TimeoutStopSec=20
+UMask=0022
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,37 @@
+[package]
+name = "vesper-codex"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Vesper Codex, the site's content store: collections and their documents, the writer, change logs and trash, the media library (IDN's), uploads, search, settings backups, exports, the box-to-Codex link and show boxes' mirrors"
+
+[dependencies]
+vesper-core = { path = "../vesper-core" }
+vesper-site = { path = "../vesper-site" }
+model = { path = "../model" }
+protocol = { path = "../protocol" }
+# Probing uploaded media and their thumbnails (the media worker).
+media = { path = "../media" }
+# The site media library, the box-to-Codex channel and the Site Manager's backup format.
+idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+anyhow = "1.0.104"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util"] }
+axum = "0.8.9"
+tower = { version = "0.5.3", features = ["util"] }
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
+sha2 = "0.11.1"
+getrandom = "0.4.3"
+tracing = "0.1.44"
+uuid = { version = "1.28.0", features = ["serde", "v4"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg"] }
+
+# Free disk space (uploads and storage) and low-priority media workers.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.191"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Threading"] }

@@ -1,0 +1,6 @@
+{
+  "product": "vesper",
+  "name": "Vesper",
+  "install": { "kind": "deb", "units": ["vesper.service", "vesper-display.service"] },
+  "healthUrl": "http://127.0.0.1:5555/api/v1/server"
+}

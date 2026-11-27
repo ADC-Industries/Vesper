@@ -1,0 +1,24 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+# The Tauri shell needs WebKitGTK to build; it has its own build (apps/control/README.md).
+exclude = ["apps/control/src-tauri", "apps/launcher-tray/src-tauri"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+# Debug info: line numbers only for our crates, none for dependencies. Panics and backtraces
+# still name the file and line. Full debug info made linking the test binaries the slowest,
+# most memory- and disk-hungry part of the build (target/ once grew past 160 GB).
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+# The optional IDN Open Protocol library (feature `idn`) encodes video in software: build it
+# optimised even in dev/test builds so debug runs keep real-time rates. No effect without
+# the feature.
+[profile.dev.package.idn-open-protocol]
+opt-level = 3

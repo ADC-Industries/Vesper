@@ -1,0 +1,6 @@
+{
+  "product": "vesper",
+  "name": "Vesper",
+  "install": { "kind": "nsis", "task": "Vesper" },
+  "healthUrl": "http://127.0.0.1:5555/api/v1/server"
+}

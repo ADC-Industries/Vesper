@@ -1,0 +1,51 @@
+[
+  {
+    "revision": "511bb89b5b5047b2",
+    "schemaVersion": 2,
+    "id": "55a5fa28-6180-40d0-af62-d4a768903dad",
+    "name": "Lower Third",
+    "sortKey": "V",
+    "slide": {
+      "id": "dd9d4629-44a0-4d04-a699-f18ead071bea",
+      "elements": [
+        {
+          "id": "84cf5064-d5dd-4036-a0fe-f7c6241fbb61",
+          "name": "Text",
+          "bounds": {
+            "x": 96,
+            "y": 54,
+            "width": 1728,
+            "height": 972
+          },
+          "kind": {
+            "type": "text",
+            "text": {
+              "paragraphs": [
+                {
+                  "runs": [
+                    {
+                      "text": "Welcome to Maple Street Gathering"
+                    }
+                  ]
+                }
+              ],
+              "defaultStyle": {
+                "fontFamily": "Arial",
+                "fontWeight": 400,
+                "size": 80,
+                "color": {
+                  "r": 1,
+                  "g": 1,
+                  "b": 1
+                }
+              },
+              "defaultParagraph": {
+                "alignment": "center"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+]

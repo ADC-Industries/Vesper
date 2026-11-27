@@ -1,0 +1,29 @@
+{
+  "id": "47836b1b-3716-4ceb-a8a9-2d5781c66f75",
+  "name": "Motion Loops",
+  "path": [
+    "Visuals"
+  ],
+  "kind": "manual",
+  "browser": "media",
+  "items": [
+    {
+      "id": "35940cfc-68ba-48bf-8a99-19a8c45abf8e",
+      "name": "Particles Rising",
+      "kind": "video",
+      "asset": "fb858646-3e6e-4a8a-8ccd-4542e8ad348f",
+      "availability": "online",
+      "enabled": true,
+      "duration": 20.0
+    },
+    {
+      "id": "9ceea4cf-968b-4767-9ac5-2addeaad2f32",
+      "name": "Light Leaks",
+      "kind": "video",
+      "asset": "05e38823-5b73-4cc9-b044-6045eba5f1a0",
+      "availability": "online",
+      "enabled": true,
+      "duration": 18.0
+    }
+  ]
+}

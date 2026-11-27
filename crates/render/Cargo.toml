@@ -1,0 +1,24 @@
+[package]
+name = "render"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Headless GPU slide renderer (wgpu): turns model slides and media into frames"
+
+[dependencies]
+model = { path = "../model" }
+anyhow = "1.0.104"
+serde_json = "1.0.154"
+log = "0.4.34"
+wgpu = "30.0.1"
+pollster = "1.0.1"
+bytemuck = { version = "1.25.2", features = ["derive"] }
+cosmic-text = "0.19.0"
+fontdb = "0.23.0"
+swash = "0.2.10"
+zeno = "0.3.3"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "bmp", "gif", "webp", "tiff"] }
+jpeg-decoder = { version = "0.3.2", default-features = false }
+
+[dev-dependencies]
+serde = "1.0.229"

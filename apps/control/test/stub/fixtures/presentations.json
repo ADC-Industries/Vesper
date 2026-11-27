@@ -1,0 +1,50 @@
+[
+  {
+    "id": "5a6cab40-8854-44e7-940c-fa780a2a1fc0",
+    "name": "Evening Ember",
+    "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+    "slideCount": 2,
+    "destination": "slide",
+    "modifiedAt": "2026-11-23T14:02:26Z"
+  },
+  {
+    "id": "646adb7f-d239-4489-bd2a-07a96e09294c",
+    "name": "Harbor Light",
+    "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+    "slideCount": 2,
+    "destination": "slide",
+    "modifiedAt": "2026-11-23T14:02:26Z"
+  },
+  {
+    "id": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+    "name": "Morning Lantern",
+    "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+    "slideCount": 7,
+    "destination": "slide",
+    "modifiedAt": "2026-11-23T14:02:26Z"
+  },
+  {
+    "id": "93835d09-8b5f-4d88-a75a-5758ed609091",
+    "name": "River of Kindness",
+    "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+    "slideCount": 4,
+    "destination": "slide",
+    "modifiedAt": "2026-11-23T14:02:26Z"
+  },
+  {
+    "id": "9183fec1-f33a-415d-b452-dcd2f557ece6",
+    "name": "Welcome",
+    "library": "54548a55-903b-45fc-94b4-eb4f0aab05a5",
+    "slideCount": 2,
+    "destination": "slide",
+    "modifiedAt": "2026-11-23T14:02:26Z"
+  },
+  {
+    "id": "6ca7c45e-8b32-489d-9d7c-dee418ba83fc",
+    "name": "Wide Open Fields",
+    "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+    "slideCount": 3,
+    "destination": "slide",
+    "modifiedAt": "2026-11-23T14:02:26Z"
+  }
+]

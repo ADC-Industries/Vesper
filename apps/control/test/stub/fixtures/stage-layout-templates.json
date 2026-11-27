@@ -1,0 +1,18 @@
+[
+  {
+    "id": "currentNext",
+    "name": "Current / Next"
+  },
+  {
+    "id": "lyricsClockTimer",
+    "name": "Lyrics + Clock + Timer"
+  },
+  {
+    "id": "notes",
+    "name": "Notes"
+  },
+  {
+    "id": "musician",
+    "name": "Musician (Chords)"
+  }
+]

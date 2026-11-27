@@ -1,0 +1,64 @@
+# Vesper, the headless render/playout server, for network-only boxes: no display attached,
+# every screen goes out over IDN Open Protocol (compatible with NDI®).
+#
+# Settings: /etc/default/vesper (VESPER_ARGS). Data: /var/lib/vesper (the vesper user's home).
+# Logs: journalctl -u vesper.
+#
+# Display boxes (screens on attached monitors or projectors) use vesper-display.service
+# instead: the same server, ordered after the boot splash and in conflict with a desktop
+# (docs/PACKAGING.md, "Display boxes").
+[Unit]
+Description=Vesper presentation server
+Documentation=file:///usr/share/doc/vesper/PACKAGING.md
+Wants=network-online.target avahi-daemon.service
+After=network-online.target avahi-daemon.service sound.target
+
+[Service]
+Type=exec
+User=vesper
+Group=vesper
+# GPU (render, video: /dev/dri) and sound cards (audio: /dev/snd).
+SupplementaryGroups=render video audio
+EnvironmentFile=-/etc/default/vesper
+Environment=HOME=/var/lib/vesper XDG_CACHE_HOME=/var/cache/vesper
+ExecStart=/usr/bin/vesper --data /var/lib/vesper --ui-dir /usr/share/vesper/ui $VESPER_ARGS
+WorkingDirectory=/var/lib/vesper
+StateDirectory=vesper
+StateDirectoryMode=0750
+CacheDirectory=vesper
+Restart=on-failure
+RestartSec=3
+# The server stops cleanly on SIGTERM (outputs, Site Manager, mDNS).
+TimeoutStopSec=20
+LimitNOFILE=65536
+
+# Hardening. Writable: /var/lib/vesper, /var/cache/vesper and a private /tmp only.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0027
+# Devices: the GPU (DRM render nodes, for wgpu and VA-API) and ALSA sound cards only.
+DevicePolicy=closed
+DeviceAllow=char-drm rw
+DeviceAllow=char-alsa rw
+# IP for the API, IDN and mDNS; netlink to list the network interfaces; Unix sockets.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+# Not set on purpose: MemoryDenyWriteExecute (the GPU drivers' shader compilers JIT code),
+# PrivateDevices (hides /dev/dri and /dev/snd), RestrictRealtime (audio threads may ask for
+# real-time priority), PrivateNetwork/IPAddressDeny (it is a network server).
+
+[Install]
+WantedBy=multi-user.target

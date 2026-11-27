@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vesper Launcher
+Comment=Installs, updates and monitors Vesper on this machine
+Exec=vesper-launcher-tray
+Icon=vesper-launcher
+Terminal=false
+Categories=Utility;System;
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5

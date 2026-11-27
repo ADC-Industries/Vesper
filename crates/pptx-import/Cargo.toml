@@ -1,0 +1,27 @@
+[package]
+name = "pptx-import"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Reads PowerPoint .pptx files (and Keynote / Google Slides exported as .pptx) into Vesper presentations"
+
+[dependencies]
+model = { path = "../model" }
+anyhow = "1.0.104"
+# OOXML is a zip of XML parts: a small reader of our own over flate2 (already in the build),
+# and roxmltree for the XML (already in the build).
+flate2 = "1.1.10"
+crc32fast = "1.5.2"
+roxmltree = "0.20.0"
+# Picture sizes (crops) and the picture fallback's PNGs.
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp", "tiff"] }
+
+[dev-dependencies]
+serde_json = "1.0.154"
+
+# Stopping LibreOffice with everything it started (a process group / a job object).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.191"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

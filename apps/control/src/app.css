@@ -1,0 +1,458 @@
+/* Vesper Oriel design tokens (the owner's canvas; docs/ORIEL-REDESIGN-PLAN.md 2.4) and base
+   styles. Components use these custom properties rather than hard-coded colours.
+   Status colours: violet = selection, amber = live and warnings, red = errors and offline only,
+   green = on / healthy, grey = off, blue = information only. */
+
+/* Inter (variable, weights 100–900), bundled: nothing is fetched from the internet at runtime.
+   The files and the SIL Open Font License are in src/assets/fonts/. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-cyrillic-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-cyrillic-wght-normal.woff2") format("woff2");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-greek-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-greek-wght-normal.woff2") format("woff2");
+  unicode-range: U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-vietnamese-wght-normal.woff2") format("woff2");
+  unicode-range: U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-display: block;
+  font-weight: 100 900;
+  src: url("./assets/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+:root {
+  /* Surfaces, darkest to lightest. */
+  --surface-well: #0b0c0f;     /* thumbnail and log wells */
+  --surface-backdrop: #0f1013; /* canvas / stage backdrop */
+  --surface-app: #121317;      /* app background, footer, mode track */
+  --surface-sunk: #15161a;     /* work areas (slide area), sub-toolbars, pills */
+  --surface-panel: #1a1c21;    /* header, side columns, bin */
+  --surface-raised: #22252b;   /* fields, cards, menus */
+  --surface-overlay: #2a2d35;  /* secondary buttons, toasts, hover on raised */
+
+  /* Lines. */
+  --line: #2c2f37;             /* dividers */
+  --line-strong: #3a3d46;      /* control borders, separators */
+  --line-hover: #4a4e58;
+
+  /* Text. */
+  --text-strong: #ffffff;      /* on violet and coloured fills */
+  --text: #ecedf1;
+  --text-2: #c5c8d1;           /* secondary */
+  --text-label: #a3a7b3;       /* labels, section titles */
+  --text-meta: #8a8e9a;        /* meta, placeholders */
+  --text-disabled: #6a6e78;
+
+  /* Violet accent: selection, primary actions, focus. */
+  --accent: #6e5ce6;
+  --accent-hover: #7d6cf0;
+  --accent-sel: #2f2a55;       /* selected rows, current page */
+  --accent-sel-2: #24223a;     /* active section */
+  --accent-ring: #a99bff;      /* focus ring, tab underline */
+  --accent-link: #c9c0ff;
+  --accent-link-hover: #e4deff;
+  --hotkey: #b48cf0;
+
+  /* Live (amber): what the audience sees; also warnings. */
+  --live: #f5a524;
+  --live-ink: #1a1300;         /* text on amber */
+  --live-soft: rgba(245, 165, 36, 0.16);
+  --next-ring: #9aa0ad;
+
+  /* Status. */
+  --ok: #5fcb82;               /* on / healthy */
+  --ok-text: #7fd39a;
+  --ok-bg: #1e3326;
+  --ok-bg-text: #cff2da;
+  --off: #6a6e78;              /* off */
+  --danger: #f06b6b;           /* errors, offline */
+  --danger-text: #ff9c9c;
+  --danger-bg: #8e2323;
+  --danger-soft: rgba(240, 107, 107, 0.14);
+  --info: #7aa7f0;             /* information only */
+  --info-text: #a9c6f5;
+  --warn: var(--live);
+
+  /* Layer colours. */
+  --layer-media: #4fb487;
+  --layer-slide: #f5a524;
+  --layer-props: #5b8def;
+  --layer-messages: #e86a6a;
+  --layer-audio: #a99bff;
+
+  /* Group colours (the canvas's defaults). */
+  --group-neutral: #3a3d46;
+  --group-verse: #2f5fb8;
+  --group-chorus: #1f9e8e;
+  --group-bridge: #b8456b;
+  --group-ending: #7a5bd6;
+  --group-scripture: #2e7d5b;
+
+  /* Radii. */
+  --r-xs: 3px;                 /* chips */
+  --r-sm: 5px;                 /* menu items, small fields */
+  --r: 6px;                    /* default */
+  --r-card: 8px;               /* cards, menus, segmented tracks, toasts */
+  --r-popover: 10px;
+  --r-dialog: 12px;
+  --r-pill: 14px;
+
+  /* Shadows. */
+  --shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-dialog: 0 20px 50px rgba(0, 0, 0, 0.6);
+
+  /* Type: 13 px base, 11 px uppercase section labels. */
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+  --fs-2xs: 10px;              /* chips */
+  --fs-xs: 11px;               /* section labels, meta */
+  --fs-sm: 12px;
+  --fs: 13px;
+  --fs-md: 14px;
+  --fs-title: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --label-tracking: 0.08em;
+
+  /* Spacing. */
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 6px;
+  --sp-4: 8px;
+  --sp-5: 10px;
+  --sp-6: 12px;
+  --sp-7: 14px;
+  --sp-8: 16px;
+
+  /* Controls and icons (lucide-svelte, 16 px, stroke 1.8). */
+  --control-h: 30px;
+  --icon: 16px;
+
+  /* Older names, kept so existing components follow the new palette; new code uses the names
+     above. */
+  --chrome: var(--surface-panel);
+  --panel: var(--surface-panel);
+  --list: var(--surface-panel);
+  --work: var(--surface-sunk);
+  --work-2: var(--surface-panel);
+  --deep: var(--surface-app);
+  --tabbar: var(--surface-raised);
+  --tile: var(--surface-raised);
+  --tile-hover: var(--surface-overlay);
+  --menu-bg: var(--surface-raised);
+  --menu-sep: var(--line-strong);
+  --menu-hover: var(--accent-sel);
+  --menu-open: var(--accent-sel);
+  --bg-0: var(--surface-app);
+  --bg-1: var(--surface-panel);
+  --bg-2: var(--surface-raised);
+  --bg-3: var(--surface-overlay);
+  --bg-4: var(--line-strong);
+  --line-soft: var(--line);
+  --text-dim: var(--text-2);
+  --text-faint: var(--text-meta);
+  --accent-bright: var(--accent-ring);
+  --accent-dim: var(--accent-sel);
+  --live-dim: var(--live-soft);
+  --onair: var(--live);
+  --onair-dim: var(--live-soft);
+  --radius: var(--r);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--surface-app);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: 1.35;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+#app {
+  height: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+a {
+  color: var(--accent-link);
+}
+a:hover {
+  color: var(--accent-link-hover);
+}
+
+/* Visible focus for keyboard users everywhere (mouse clicks don't show it). */
+:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="password"],
+input:not([type]),
+select,
+textarea {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 5px 8px;
+  min-height: 28px;
+  user-select: text;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-meta);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.45;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+select {
+  appearance: none;
+  padding-right: 26px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-label) 50%),
+    linear-gradient(135deg, var(--text-label) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 50%, calc(100% - 8px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+select option {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+* {
+  scrollbar-color: var(--line-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--line-hover);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Small uppercase section labels (11 px / 600, tracked). The SectionLabel component uses it. */
+.section-title,
+.section-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+
+/* Small icon buttons used in headers and bottom bars. */
+.ibtn {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--text-2);
+}
+.ibtn:hover:not(:disabled) {
+  background: var(--surface-overlay);
+  color: var(--text);
+}
+.ibtn.on {
+  color: var(--accent-ring);
+}
+.ibtn:disabled {
+  color: var(--text-disabled);
+}
+
+/* Centred empty-state tile ("+ New Presentation", "Import Media"). */
+.tile-empty {
+  height: 100%;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-label);
+}
+.tile-empty .tile {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-card);
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.tile-empty .tile:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-overlay);
+}
+.tile-empty .tile:disabled {
+  cursor: default;
+}
+.tile-empty span {
+  font-size: var(--fs-md);
+}
+
+/* Filter field of bottom bars. */
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--surface-app);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--text-meta);
+}
+.filter input {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--fs-sm);
+  outline: none;
+}
+.filter:focus-within {
+  border-color: var(--accent);
+}
+
+/* Thin violet range sliders, as in the canvas's bottom bars. */
+input[type="range"] {
+  accent-color: var(--accent);
+}
+input[type="range"].slim {
+  width: 106px;
+  height: 14px;
+}
+
+.kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 1px 5px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-xs);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-align: center;
+  color: var(--text);
+  background: var(--surface-raised);
+}

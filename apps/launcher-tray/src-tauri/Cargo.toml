@@ -1,0 +1,25 @@
+# Vesper Launcher's tray app (docs/LAUNCHER-PLAN.md): a tray icon in the Launcher's status
+# colour and a small window showing the Launcher's own page (http://127.0.0.1:5556/). It talks
+# only to the local Launcher service. Excluded from the root Cargo workspace, like Oriel's shell,
+# because it needs the WebKitGTK system libraries to build.
+[package]
+name = "vesper-launcher-tray"
+version = "0.1.0"
+description = "Vesper Launcher tray app"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Dylan Charpentier <info@adcnetwork.org>"]
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

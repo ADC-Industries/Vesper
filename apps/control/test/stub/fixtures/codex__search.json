@@ -1,0 +1,45 @@
+{
+  "hits": [
+    {
+      "kind": "presentation",
+      "id": "646adb7f-d239-4489-bd2a-07a96e09294c",
+      "collection": "6c931ace-df87-4f16-960c-43669b655534",
+      "collectionName": "Booth A",
+      "title": "Harbor Light",
+      "field": "name",
+      "snippet": [
+        {
+          "text": "Harbor "
+        },
+        {
+          "text": "Light",
+          "mark": true
+        }
+      ]
+    },
+    {
+      "kind": "presentation",
+      "id": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+      "collection": "6c931ace-df87-4f16-960c-43669b655534",
+      "collectionName": "Booth A",
+      "title": "Morning Lantern",
+      "field": "text",
+      "snippet": [
+        {
+          "text": "Wake the sleepy valley now / Carry "
+        },
+        {
+          "text": "light",
+          "mark": true
+        },
+        {
+          "text": " across the plain"
+        }
+      ],
+      "slideIndex": 0,
+      "slide": "e8c237de-4404-4cea-9e83-8618efa84bd2",
+      "section": "7c831aec-2831-4e23-b81a-15e98a56acb9"
+    }
+  ],
+  "total": 2
+}

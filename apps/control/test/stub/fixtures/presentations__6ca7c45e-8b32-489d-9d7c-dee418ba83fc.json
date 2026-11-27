@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 2,
+  "id": "6ca7c45e-8b32-489d-9d7c-dee418ba83fc",
+  "name": "Wide Open Fields",
+  "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+  "sections": [
+    {
+      "id": "42a5e1c7-1f72-46b5-b333-3b62d467c040",
+      "name": "Verse 1",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "3b3934fe-2d7c-4928-8702-7f4a141561c4",
+          "elements": [
+            {
+              "id": "1a1c8da4-b377-40a8-b3e2-d3933c7e5f8a",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Wide open fields under silver rain"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Seeds in the furrow wait again"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "5a0016f4-e406-435d-9aba-2ec6497fe053",
+      "name": "Chorus",
+      "color": {
+        "r": 0.12156863,
+        "g": 0.61960787,
+        "b": 0.5568628
+      },
+      "slides": [
+        {
+          "id": "ce920650-b7ca-4a49-9b32-c5952dd3012d",
+          "elements": [
+            {
+              "id": "bdd00243-9f99-4daa-979e-2e50fea4d59c",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Grow, little seed, grow tall"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Sun on the garden wall"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0afd2c35-6156-47a7-83e3-a2951bc053d9",
+      "name": "Bridge",
+      "color": {
+        "r": 0.72156864,
+        "g": 0.27058825,
+        "b": 0.41960785
+      },
+      "slides": [
+        {
+          "id": "529f38f5-18ea-4f5b-82b8-bc7b334fdd7a",
+          "elements": [
+            {
+              "id": "2b81f557-20c6-4f14-84a0-87a3caf1cf11",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Season by season"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Rooted and reaching"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-11-23T14:02:26Z",
+  "modifiedAt": "2026-11-23T14:02:26Z"
+}

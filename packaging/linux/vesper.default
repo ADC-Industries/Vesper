@@ -1,0 +1,10 @@
+# Extra command-line options for the Vesper server (vesper.service). Run `vesper --help` for
+# the full list. The unit already passes --data /var/lib/vesper and --ui-dir /usr/share/vesper/ui.
+#
+# Examples:
+#   VESPER_ARGS="--listen 0.0.0.0:5555"
+#   VESPER_ARGS="--codex-channel-port 29300 --codex-cache-gib 64"
+#   VESPER_ARGS="--software-decode"
+#
+# Logging: RUST_LOG=vesper_server=debug,info
+VESPER_ARGS=""

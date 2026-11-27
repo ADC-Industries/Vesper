@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+if [ -d /run/systemd/system ]; then
+    systemctl --system daemon-reload >/dev/null || true
+fi
+
+if [ "$1" = "remove" ]; then
+    deb-systemd-helper mask vesper-launcher.service >/dev/null || true
+fi
+
+if [ "$1" = "purge" ]; then
+    deb-systemd-helper purge vesper-launcher.service >/dev/null || true
+    deb-systemd-helper unmask vesper-launcher.service >/dev/null || true
+    # The Launcher's state (kept packages, its site key) goes; the products' data stays.
+    rm -rf /var/lib/vesper-launcher
+fi
+
+exit 0

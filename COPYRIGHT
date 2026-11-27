@@ -1,0 +1,31 @@
+Copyright (c) 2026 ADC Industries
+
+Licensed under either of
+
+ * Apache License, Version 2.0 (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+
+Third-party components keep their own licences, including:
+ * The community ProPresenter 7 schemas pro-import is built from
+   (github.com/greyshirtguy/ProPresenter7-Proto), MIT, Copyright (c) 2023
+   greyshirtguy: not included in this repository; scripts/fetch-propresenter-proto.sh
+   downloads them at a pinned commit (source, pins and licence text:
+   crates/pro-import/PROTO.md).
+ * apps/control/src/assets/fonts/: the Inter typeface (github.com/rsms/inter),
+   SIL Open Font License 1.1, Copyright 2016 The Inter Project Authors (see
+   OFL.txt in that folder).
+ * IDN Open Protocol (idn-open-protocol), MIT OR Apache-2.0, a separate project
+   used as a library dependency and not included in this repository.
+ * mimalloc (the server's memory allocator), MIT, Copyright (c) 2018-2025
+   Microsoft Corporation, Daan Leijen; compiled into the server from the
+   `mimalloc` crate.
+
+Network video is described as "compatible with NDI®". NDI® is a registered
+trademark of Vizrt NDI AB. ProPresenter is a trademark of Renewed Vision. This
+project is not affiliated with or endorsed by Vizrt or by Renewed Vision.

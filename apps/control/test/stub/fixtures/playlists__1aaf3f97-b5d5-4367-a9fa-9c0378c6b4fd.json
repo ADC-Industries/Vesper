@@ -1,0 +1,118 @@
+{
+  "id": "1aaf3f97-b5d5-4367-a9fa-9c0378c6b4fd",
+  "name": "Sunday Morning",
+  "parent": "e92f4cca-bb10-4817-9cca-8c545d33226d",
+  "purpose": "service",
+  "items": [
+    {
+      "id": "8e837d2a-5c44-41c2-9535-090ed64ae60c",
+      "displayName": "Pre-service",
+      "enabled": true,
+      "kind": {
+        "type": "header",
+        "name": "Pre-service",
+        "color": {
+          "r": 0.22745098,
+          "g": 0.23921569,
+          "b": 0.27450982
+        }
+      },
+      "presentation": null
+    },
+    {
+      "id": "2a6556cb-23e2-4936-9908-1f275109decc",
+      "displayName": "Welcome",
+      "enabled": true,
+      "kind": {
+        "type": "presentation",
+        "presentation": {
+          "id": "9183fec1-f33a-415d-b452-dcd2f557ece6",
+          "name": "Welcome"
+        }
+      },
+      "presentation": {
+        "id": "9183fec1-f33a-415d-b452-dcd2f557ece6",
+        "name": "Welcome",
+        "library": "54548a55-903b-45fc-94b4-eb4f0aab05a5",
+        "slideCount": 2,
+        "destination": "slide",
+        "modifiedAt": "2026-11-23T14:02:26Z"
+      }
+    },
+    {
+      "id": "c6472a8b-1a5d-4c92-b0cb-9ca322d4f4e4",
+      "displayName": "Worship",
+      "enabled": true,
+      "kind": {
+        "type": "header",
+        "name": "Worship",
+        "color": {
+          "r": 0.18431373,
+          "g": 0.37254903,
+          "b": 0.72156864
+        }
+      },
+      "presentation": null
+    },
+    {
+      "id": "bc3e071b-1b35-43a1-bd73-b1b66f0a02a1",
+      "displayName": "Morning Lantern",
+      "enabled": true,
+      "kind": {
+        "type": "presentation",
+        "presentation": {
+          "id": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+          "name": "Morning Lantern"
+        }
+      },
+      "presentation": {
+        "id": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+        "name": "Morning Lantern",
+        "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+        "slideCount": 7,
+        "destination": "slide",
+        "modifiedAt": "2026-11-23T14:02:26Z"
+      }
+    },
+    {
+      "id": "2b429216-a51a-4f70-90fe-756f8eec8314",
+      "displayName": "River of Kindness",
+      "enabled": true,
+      "kind": {
+        "type": "presentation",
+        "presentation": {
+          "id": "93835d09-8b5f-4d88-a75a-5758ed609091",
+          "name": "River of Kindness"
+        }
+      },
+      "presentation": {
+        "id": "93835d09-8b5f-4d88-a75a-5758ed609091",
+        "name": "River of Kindness",
+        "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+        "slideCount": 4,
+        "destination": "slide",
+        "modifiedAt": "2026-11-23T14:02:26Z"
+      }
+    },
+    {
+      "id": "8a6d4f92-39d5-4160-9a74-84f9609ce3a0",
+      "displayName": "Harbor Light",
+      "enabled": true,
+      "kind": {
+        "type": "presentation",
+        "presentation": {
+          "id": "646adb7f-d239-4489-bd2a-07a96e09294c",
+          "name": "Harbor Light"
+        }
+      },
+      "presentation": {
+        "id": "646adb7f-d239-4489-bd2a-07a96e09294c",
+        "name": "Harbor Light",
+        "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+        "slideCount": 2,
+        "destination": "slide",
+        "modifiedAt": "2026-11-23T14:02:26Z"
+      }
+    }
+  ]
+}

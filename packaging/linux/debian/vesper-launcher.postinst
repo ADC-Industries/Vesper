@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ]; then
+    # The Vesper Launcher: enabled on first install (an admin's disable is kept) and started
+    # on every configure: a first install, an upgrade from a package without it, a reinstall
+    # after `apt remove`. `start` leaves a running Launcher alone: it is never restarted here,
+    # since it may be the Launcher itself running this dpkg; its self-update helper restarts
+    # it and checks the new version (docs/LAUNCHER-PLAN.md). After an upgrade by hand (apt),
+    # `systemctl restart vesper-launcher` runs the new one at once.
+    deb-systemd-helper unmask vesper-launcher.service >/dev/null || true
+    if deb-systemd-helper --quiet was-enabled vesper-launcher.service; then
+        deb-systemd-helper enable vesper-launcher.service >/dev/null || true
+    else
+        deb-systemd-helper update-state vesper-launcher.service >/dev/null || true
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemctl --system daemon-reload >/dev/null || true
+        deb-systemd-invoke start vesper-launcher.service >/dev/null || true
+    fi
+fi
+
+exit 0

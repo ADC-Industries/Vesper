@@ -1,0 +1,557 @@
+{
+  "schemaVersion": 2,
+  "id": "ac7a4ae2-b205-4187-a614-8f7dbd67faec",
+  "name": "Lanterns on the Hill",
+  "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+  "canvasSize": {
+    "width": 1920,
+    "height": 1080
+  },
+  "sections": [
+    {
+      "id": "7e1f0003-5ec0-4c00-8a00-000000000003",
+      "slides": [
+        {
+          "id": "7e1f0002-5d5d-4c00-8a00-000000000002",
+          "elements": [],
+          "actions": [
+            {
+              "id": "7e1f0001-ac70-4c00-8a00-000000000001",
+              "name": "amber-sky_loop.mp4",
+              "kind": {
+                "type": "media",
+                "asset": "7e1f0000-a55e-4c00-8a00-000000000001"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1f0008-5ec0-4c00-8a00-000000000008",
+      "name": "Verse 1",
+      "color": {
+        "r": 0.1843,
+        "g": 0.3725,
+        "b": 0.7216
+      },
+      "hotkey": {
+        "code": "KeyV"
+      },
+      "slides": [
+        {
+          "id": "7e1f0004-5d5d-4c00-8a00-000000000004",
+          "elements": [
+            {
+              "id": "7e1f0005-e1e1-4c00-8a00-000000000005",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Lanterns on the hill tonight"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Glowing soft against the rain"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "7e1f0006-5d5d-4c00-8a00-000000000006",
+          "elements": [
+            {
+              "id": "7e1f0007-e1e1-4c00-8a00-000000000007",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Every road that led me here"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Turns to gold and home again"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1f000d-5ec0-4c00-8a00-00000000000d",
+      "name": "Chorus",
+      "color": {
+        "r": 0.1216,
+        "g": 0.6196,
+        "b": 0.5569
+      },
+      "hotkey": {
+        "code": "KeyC"
+      },
+      "slides": [
+        {
+          "id": "7e1f0009-5d5d-4c00-8a00-000000000009",
+          "elements": [
+            {
+              "id": "7e1f000a-e1e1-4c00-8a00-00000000000a",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Carry the light, carry it high"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Over the water, under the sky"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "7e1f000b-5d5d-4c00-8a00-00000000000b",
+          "elements": [
+            {
+              "id": "7e1f000c-e1e1-4c00-8a00-00000000000c",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Nothing is lost that love can find"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Carry the light, carry it high"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1f0012-5ec0-4c00-8a00-000000000012",
+      "name": "Verse 2",
+      "color": {
+        "r": 0.1843,
+        "g": 0.3725,
+        "b": 0.7216
+      },
+      "slides": [
+        {
+          "id": "7e1f000e-5d5d-4c00-8a00-00000000000e",
+          "elements": [
+            {
+              "id": "7e1f000f-e1e1-4c00-8a00-00000000000f",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Neighbours gather at the gate"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Bread and stories on the table"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "7e1f0010-5d5d-4c00-8a00-000000000010",
+          "elements": [
+            {
+              "id": "7e1f0011-e1e1-4c00-8a00-000000000011",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Every window lit and warm"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Every heart as wide as able"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1f0015-5ec0-4c00-8a00-000000000015",
+      "name": "Chorus",
+      "color": {
+        "r": 0.1216,
+        "g": 0.6196,
+        "b": 0.5569
+      },
+      "slides": [
+        {
+          "id": "7e1f0013-5d5d-4c00-8a00-000000000013",
+          "elements": [
+            {
+              "id": "7e1f0014-e1e1-4c00-8a00-000000000014",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Carry the light, carry it high"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Over the water, under the sky"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1f0019-5ec0-4c00-8a00-000000000019",
+      "name": "Bridge",
+      "color": {
+        "r": 0.7216,
+        "g": 0.2706,
+        "b": 0.4196
+      },
+      "slides": [
+        {
+          "id": "7e1f0017-5d5d-4c00-8a00-000000000017",
+          "elements": [
+            {
+              "id": "7e1f0018-e1e1-4c00-8a00-000000000018",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Slow now, the fields are still"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Hold on, the dawn is near"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ],
+          "actions": [
+            {
+              "id": "7e1f0016-ac70-4c00-8a00-000000000016",
+              "name": "field-mist_still.jpg",
+              "kind": {
+                "type": "media",
+                "asset": "7e1f0000-a55e-4c00-8a00-000000000002"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e1f001c-5ec0-4c00-8a00-00000000001c",
+      "name": "Ending",
+      "color": {
+        "r": 0.4784,
+        "g": 0.3569,
+        "b": 0.8392
+      },
+      "slides": [
+        {
+          "id": "7e1f001a-5d5d-4c00-8a00-00000000001a",
+          "elements": [
+            {
+              "id": "7e1f001b-e1e1-4c00-8a00-00000000001b",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Lanterns on the hill"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Carry the light home"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ],
+          "hotkey": {
+            "code": "KeyE"
+          }
+        }
+      ]
+    }
+  ]
+}

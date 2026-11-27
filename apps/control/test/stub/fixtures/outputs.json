@@ -1,0 +1,13 @@
+[
+  {
+    "revision": "4669601784f7242d",
+    "schemaVersion": 2,
+    "id": "1fbb94ae-6672-4670-a875-7793aea5a3f8",
+    "name": "Main Projector",
+    "screen": "3b86def4-cbe1-439e-87d7-c837c454913c",
+    "transport": {
+      "type": "idn",
+      "sourceName": "Main Projector"
+    }
+  }
+]

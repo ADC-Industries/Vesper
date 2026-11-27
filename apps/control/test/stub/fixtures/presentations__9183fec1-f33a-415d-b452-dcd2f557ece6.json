@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 2,
+  "id": "9183fec1-f33a-415d-b452-dcd2f557ece6",
+  "name": "Welcome",
+  "library": "54548a55-903b-45fc-94b4-eb4f0aab05a5",
+  "sections": [
+    {
+      "id": "94d55c3b-6994-4681-b1b8-668d7411d65b",
+      "name": "Title",
+      "color": {
+        "r": 0.22745098,
+        "g": 0.23921569,
+        "b": 0.27450982
+      },
+      "slides": [
+        {
+          "id": "d9940a4f-5e79-4e5b-9422-c5d0fa22f51d",
+          "elements": [
+            {
+              "id": "37999a79-0559-4836-9834-24330bdf3d5f",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Welcome to Maple Street Gathering"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "14ce7239-4ac9-440f-9c63-ea95066d8830",
+          "elements": [
+            {
+              "id": "57974697-a59d-40cc-b0de-eab5723086c1",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Coffee and tea in the hall after the service"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-11-23T14:02:26Z",
+  "modifiedAt": "2026-11-23T14:02:26Z"
+}

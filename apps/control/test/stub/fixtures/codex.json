@@ -1,0 +1,14 @@
+{
+  "id": "2adb06a5-2d13-4c9f-a48b-59728c980931",
+  "role": "host",
+  "collection": "6c931ace-df87-4f16-960c-43669b655534",
+  "collectionName": "Booth A",
+  "collections": 1,
+  "documents": 19,
+  "trash": 0,
+  "deletedCollections": 0,
+  "mediaLibrary": {
+    "available": true,
+    "served": false
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 2,
+  "id": "646adb7f-d239-4489-bd2a-07a96e09294c",
+  "name": "Harbor Light",
+  "library": "570b7ae5-267f-4f32-826f-070b18f11694",
+  "sections": [
+    {
+      "id": "89607622-2a8d-4a44-a1ea-d53fe91092a0",
+      "name": "Verse 1",
+      "color": {
+        "r": 0.18431373,
+        "g": 0.37254903,
+        "b": 0.72156864
+      },
+      "slides": [
+        {
+          "id": "5faee56b-d541-465c-a15e-d35fa91e066b",
+          "elements": [
+            {
+              "id": "7db835a1-a01d-4dd1-92f8-e7ba5942d284",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Out where the grey waves wander"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "A small light keeps the shore"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "477d6c9a-f423-4615-8ee9-57005dc229ad",
+      "name": "Chorus",
+      "color": {
+        "r": 0.12156863,
+        "g": 0.61960787,
+        "b": 0.5568628
+      },
+      "slides": [
+        {
+          "id": "b1303f43-f4fb-48b3-ac67-bef31f502b42",
+          "elements": [
+            {
+              "id": "0e609a3f-e3ac-4554-86fa-a2f71515381c",
+              "name": "Text",
+              "bounds": {
+                "x": 96,
+                "y": 54,
+                "width": 1728,
+                "height": 972
+              },
+              "kind": {
+                "type": "text",
+                "text": {
+                  "paragraphs": [
+                    {
+                      "runs": [
+                        {
+                          "text": "Harbor light, harbor light"
+                        }
+                      ]
+                    },
+                    {
+                      "runs": [
+                        {
+                          "text": "Guide the boats in tonight"
+                        }
+                      ]
+                    }
+                  ],
+                  "defaultStyle": {
+                    "fontFamily": "Arial",
+                    "fontWeight": 400,
+                    "size": 80,
+                    "color": {
+                      "r": 1,
+                      "g": 1,
+                      "b": 1
+                    }
+                  },
+                  "defaultParagraph": {
+                    "alignment": "center"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-11-23T14:02:26Z",
+  "modifiedAt": "2026-11-23T14:02:26Z"
+}

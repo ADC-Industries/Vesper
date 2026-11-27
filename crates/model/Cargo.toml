@@ -1,0 +1,17 @@
+[package]
+name = "model"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Shared data model: serde types used by the server, API, importer and storage"
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["float_roundtrip"] }
+uuid = { version = "1.28.0", features = ["serde", "v4", "v5"] }
+ts-rs = { version = "12.0.1", optional = true, features = ["uuid-impl", "no-serde-warnings"] }
+
+[features]
+# TypeScript bindings (ts-rs derives on every wire type). Off by default: the model has no
+# hard dependency on ts-rs; the `protocol` crate turns it on.
+ts = ["dep:ts-rs"]

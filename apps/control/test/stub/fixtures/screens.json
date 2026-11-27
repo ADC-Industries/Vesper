@@ -1,0 +1,19 @@
+[
+  {
+    "revision": "b29b7ad37b9d53b0",
+    "schemaVersion": 2,
+    "id": "3b86def4-cbe1-439e-87d7-c837c454913c",
+    "name": "Main Projector",
+    "sortKey": "V"
+  },
+  {
+    "revision": "fcbf6920c5f33f4b",
+    "schemaVersion": 2,
+    "id": "6703b24e-2f82-47a2-9986-b8043c7fb592",
+    "name": "Stage Monitor",
+    "sortKey": "k",
+    "kind": {
+      "type": "stage"
+    }
+  }
+]
