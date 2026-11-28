@@ -1,6 +1,6 @@
 // Live captions in Oriel (docs/CAPTIONS-PLAN.md): the status line of the Show page's captions
 // strip and Settings ▸ Captions, and the source / model choices.
-import type { CaptionModel, CaptionSource, CaptionsConfig, CaptionsState } from "$protocol";
+import type { CaptionModel, CaptionProcessor, CaptionSource, CaptionsConfig, CaptionsState } from "$protocol";
 
 /** One line for the strip: what the engine is doing. */
 export function captionStatus(c: CaptionsState | null): { cls: "off" | "ok" | "busy" | "bad"; text: string } {
@@ -77,6 +77,20 @@ export function modelOptions(models: CaptionModel[], language: string): { value:
   ];
 }
 
+/** The processor choices: the CPU (the default) or the GPU, which falls back to the CPU (with a
+ * note) when the server has none or it fails, never stopping captions. */
+export const PROCESSOR_OPTIONS: { value: CaptionProcessor; label: string }[] = [
+  { value: "cpu", label: "CPU (recommended)" },
+  { value: "gpu", label: "GPU" },
+];
+
+/** What speech recognition runs on now ("GPU · NAME" or "CPU (N threads)"), while it runs;
+ * null otherwise. Servers before GPU captions send no `gpu` (shown as the device alone). */
+export function processorInUse(c: CaptionsState | null): string | null {
+  if (!c || !c.enabled || c.status !== "running" || !c.device) return null;
+  return c.gpu ? `GPU · ${c.device}` : c.device;
+}
+
 /** The configuration with every field the settings form binds filled in (the server leaves
  * defaults out), so a form just loaded is not "changed". */
 export function withDefaults(c: CaptionsConfig): CaptionsConfig {
@@ -86,6 +100,7 @@ export function withDefaults(c: CaptionsConfig): CaptionsConfig {
     source: c.source ?? { type: "program" },
     language: c.language ?? "en",
     model: c.model ?? "auto",
+    processor: c.processor ?? "cpu",
     words: c.words ?? "",
     keepMusic: c.keepMusic ?? false,
     maxLines: c.maxLines ?? 2,

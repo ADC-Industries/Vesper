@@ -1,7 +1,8 @@
 // Shots of Site ▸ Updates (G10; see scripts/shots.mjs for `ctx`) on the synthetic site of
 // test/stub/routes/updates.mjs: three machines' Launchers (an update available, one that can
 // roll back, one offline after an automatic rollback) and the update channel's packages; then
-// an update queued, a signed package uploaded, the queued actions done, and a delete asked.
+// an update queued, "Add app" on a display box and an app queued, the GitHub releases check, a
+// signed package uploaded, the queued actions done, and a delete asked.
 const ctl = (url, body) => fetch(`${url}/api/v1/__stub/updates`, { method: "POST", body: JSON.stringify(body) });
 
 const SIG = [
@@ -25,6 +26,22 @@ export default async function ({ page, openPage, settle, shot, step, stub }) {
       await page.getByText("Update to 0.2.0 queued").waitFor({ timeout: 5000 });
       await settle(300);
       await shot("site-updates-queued");
+    });
+    await step("site updates: add an app to a display box", async () => {
+      await page.getByRole("button", { name: "Add app to Chapel Box…" }).click();
+      await page.getByTestId("updates-catalogue").getByRole("button", { name: "Add Vesper Oriel" }).waitFor({ timeout: 5000 });
+      await settle(300);
+      await shot("site-updates-add-app");
+      await page.getByTestId("updates-catalogue").getByRole("button", { name: "Add Vesper Oriel" }).click();
+      await page.getByText("Adding Vesper Oriel 0.2.0 (queued)").waitFor({ timeout: 5000 });
+      await settle(300);
+      await shot("site-updates-add-app-queued");
+    });
+    await step("site updates: releases from GitHub", async () => {
+      await page.getByTestId("updates-github").scrollIntoViewIfNeeded();
+      await page.getByTestId("updates-github-status").getByText("Last checked").waitFor({ timeout: 5000 });
+      await settle(300);
+      await shot("site-updates-github");
     });
     await step("site updates: upload a signed package", async () => {
       await page.getByTestId("updates-package-file").setInputFiles({ name: "vesper_0.3.0-1_amd64.deb", mimeType: "application/octet-stream", buffer: Buffer.from("synthetic package") });

@@ -6,7 +6,9 @@
 // Stub control (not part of the API): `POST /api/v1/__stub/captions` with
 //   {"downloading": {"model": "small.en", "downloaded": 233000000, "size": 466000000}}
 //                        the engine downloading a model (`size` null: size unknown)
-//   {"reset": true}      running again, as at start
+//   {"gpuFailed": true}  the GPU failed: running on the CPU, with the note saying so
+//   {"onGpu": true}      running on a synthetic GPU
+//   {"reset": true}      running again, as at start (on the CPU)
 
 const MODELS = [
   { name: "tiny.en", sizeMb: 75, note: "fastest, least accurate", downloaded: false },
@@ -24,7 +26,9 @@ const RUNNING = {
   downloaded: null,
   downloadSize: null,
   model: "base.en",
-  device: "CPU (6 threads)",
+  device: "CPU (8 threads)",
+  gpu: false,
+  note: null,
   load: 0.34,
   lines: [
     { line: 3, text: "Welcome to the evening service.", final: true },
@@ -33,7 +37,7 @@ const RUNNING = {
 };
 
 export default function captionsRoutes({ state, bump, json, apiError }) {
-  let config = { schemaVersion: 1, enabled: true, model: "base.en", words: "Pastor Example, Ephesians", maxLines: 2 };
+  let config = { schemaVersion: 1, enabled: true, model: "base.en", processor: "cpu", words: "Pastor Example, Ephesians", maxLines: 2 };
   state.state.captions = structuredClone(RUNNING);
   const read = (req) =>
     new Promise((ok) => {
@@ -52,7 +56,7 @@ export default function captionsRoutes({ state, bump, json, apiError }) {
         config = { ...cfg, schemaVersion: 1 };
         state.state.captions = config.enabled
           ? { ...structuredClone(RUNNING), model: config.source?.type === "external" ? null : (config.model ?? "auto") }
-          : { enabled: false, status: "off", detail: null, progress: null, downloaded: null, downloadSize: null, model: null, device: null, load: null, lines: [] };
+          : { enabled: false, status: "off", detail: null, progress: null, downloaded: null, downloadSize: null, model: null, device: null, gpu: null, note: null, load: null, lines: [] };
         json(res, 200, config);
         bump();
       });
@@ -61,6 +65,15 @@ export default function captionsRoutes({ state, bump, json, apiError }) {
     if (path === "/__stub/captions" && req.method === "POST") {
       void read(req).then((b) => {
         if (b.reset) state.state.captions = structuredClone(RUNNING);
+        if (b.onGpu) state.state.captions = { ...structuredClone(RUNNING), device: "Synthetic GPU 1", gpu: true, load: 0.08 };
+        if (b.gpuFailed)
+          state.state.captions = {
+            ...structuredClone(RUNNING),
+            device: "CPU (8 threads)",
+            gpu: false,
+            note: "The GPU failed (out of GPU memory): captions run on the CPU until they are switched off and on again or the settings change.",
+            load: 0.34,
+          };
         const d = b.downloading;
         if (d) {
           const size = d.size ?? null;

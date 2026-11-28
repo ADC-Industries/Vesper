@@ -134,15 +134,54 @@ pub async fn run_action(
         }
         LauncherAction::Update { product, version } => {
             l.newer_than_installed(product, version)?;
-            if l.stored_package(product, version).is_none() {
-                let Some(c) = l.channel() else {
-                    return Err(LauncherError::Invalid(format!(
-                        "{product} {version} isn't stored here and no update channel is configured"
-                    )));
-                };
-                let (l2, product2, version2) = (l.clone(), product.clone(), version.clone());
-                tokio::task::spawn_blocking(move || {
-                    let pkgs = c.packages().map_err(|e| LauncherError::Io(e.to_string()))?;
+            let version = fetch(l, product, version).await?;
+            update_fetched(l, product, &version).await
+        }
+        LauncherAction::Install { product, version } => {
+            let added = crate::github::prepare_add(l, product)?;
+            let r = async {
+                let version = fetch(l, product, version).await?;
+                update_fetched(l, product, &version).await
+            }
+            .await;
+            if added && !matches!(&r, Ok(o) if o.result == protocol::UpdateResult::Installed) {
+                l.forget_added(product);
+            }
+            r
+        }
+    }
+}
+
+async fn update_fetched(
+    l: &Arc<Launcher>,
+    product: &str,
+    version: &str,
+) -> Result<UpdateOutcome, LauncherError> {
+    fetch_needed(l, product, version).await;
+    if let Some(cur) = l.installed(product).version {
+        keep_package(l, product, &cur).await;
+    }
+    l.update(product, version).await
+}
+
+/// Makes sure `product` `version` is in the Launcher's store: stored already, else downloaded
+/// from the site's channel, else (no channel, the channel doesn't have it or can't be reached)
+/// from GitHub when checking it is on. The version as stored (a GitHub release's version is
+/// the signed one there).
+async fn fetch(l: &Arc<Launcher>, product: &str, version: &str) -> Result<String, LauncherError> {
+    if l.stored_package(product, version).is_some() {
+        return Ok(version.to_string());
+    }
+    let (l2, product2, version2) = (l.clone(), product.to_string(), version.to_string());
+    tokio::task::spawn_blocking(move || {
+        let from_channel = match l2.channel() {
+            None => Err(LauncherError::Invalid(format!(
+                "{product2} {version2} isn't stored here and no update channel is configured"
+            ))),
+            Some(c) => c
+                .packages()
+                .map_err(|e| LauncherError::Io(e.to_string()))
+                .and_then(|pkgs| {
                     let p = pkgs
                         .iter()
                         .find(|p| {
@@ -156,18 +195,26 @@ pub async fn run_action(
                                 l2.platform()
                             ))
                         })?;
-                    c.fetch(&l2, p)
-                })
-                .await
-                .map_err(|e| LauncherError::Io(e.to_string()))??;
+                    c.fetch(&l2, p).map(|()| version2.clone())
+                }),
+        };
+        match from_channel {
+            Ok(v) => Ok(v),
+            // A refused package stays refused: never fetched again elsewhere.
+            Err(e @ LauncherError::Signature(_)) => Err(e),
+            Err(e) if l2.config().github.enabled => {
+                tracing::info!("{product2} {version2}: {e}; trying GitHub");
+                l2.fetch_from_github(&product2, &version2)
+                    .map_err(|g| match g {
+                        LauncherError::Signature(m) => LauncherError::Signature(m),
+                        g => LauncherError::Io(format!("{e}; GitHub: {g}")),
+                    })
             }
-            fetch_needed(l, product, version).await;
-            if let Some(cur) = l.installed(product).version {
-                keep_package(l, product, &cur).await;
-            }
-            l.update(product, version).await
+            Err(e) => Err(e),
         }
-    }
+    })
+    .await
+    .map_err(|e| LauncherError::Io(e.to_string()))?
 }
 
 /// Downloads from the site's channel the packages of other products `product` `version`'s
@@ -175,10 +222,7 @@ pub async fn run_action(
 /// installed with it in one dpkg run (best effort: without them, the update is refused saying
 /// what it needs).
 async fn fetch_needed(l: &Arc<Launcher>, product: &str, version: &str) {
-    let (Ok(p), Some(pkg)) = (
-        l.product(product).cloned(),
-        l.stored_package(product, version),
-    ) else {
+    let (Ok(p), Some(pkg)) = (l.product(product), l.stored_package(product, version)) else {
         return;
     };
     let l2 = l.clone();
@@ -266,6 +310,9 @@ pub async fn run(l: Arc<Launcher>) {
     let mut last_url: Option<String> = None;
     loop {
         l.check().await;
+        // No church server (or none for a long time): GitHub, when a check is due.
+        let l2 = l.clone();
+        tokio::spawn(async move { l2.check_github().await });
         // The bundled IDN Node stays Vesper's to update (its marker, its service).
         l.idn_node_guard().await;
         // The machine's chosen roles (a run at a time, in the background: a join can wait).
@@ -301,7 +348,9 @@ pub async fn run(l: Arc<Launcher>) {
                             Ok(o) => tracing::info!("{a:?}: {:?} {}", o.result, o.message),
                             Err(e) => {
                                 tracing::warn!("{a:?}: {e}");
-                                if let LauncherAction::Update { product, version } = a {
+                                if let LauncherAction::Update { product, version }
+                                | LauncherAction::Install { product, version } = a
+                                {
                                     l.record_failure(product, version, &e.to_string());
                                 }
                             }

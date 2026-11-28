@@ -1,8 +1,9 @@
 // Typed REST client for the site's update channel and its Vesper Launchers (G10,
 // crates/protocol/README.md "Updates"): signed packages (list, upload with the signature,
-// delete) and each machine's Launcher (reports, queued Update / Roll back actions).
+// delete), each machine's Launcher (reports, queued Update / Roll back / Add app actions) and
+// the server's check of Vesper's releases on GitHub (settings, last check, the catalogue).
 
-import type { LauncherAction, LauncherEntry, UpdatePackage } from "$protocol";
+import type { Catalogue, GithubReleases, GithubSettings, LauncherAction, LauncherEntry, UpdatePackage } from "$protocol";
 import type { RestClient } from "./rest";
 import { raw, type RawAuth } from "./codexBackups";
 
@@ -24,6 +25,11 @@ export class UpdatesClient {
   deletePackage = (id: string) => this.rest.request<void>("DELETE", `/updates/packages/${enc(id)}`);
   queue = (machineId: string, action: LauncherAction) =>
     this.rest.request<LauncherEntry>("POST", `/updates/launchers/${enc(machineId)}/actions`, action);
+  github = () => this.rest.get<GithubReleases>("/updates/github");
+  setGithub = (s: GithubSettings) => this.rest.request<GithubReleases>("PUT", "/updates/github", s);
+  checkGithub = () => this.rest.request<GithubReleases>("POST", "/updates/github/check", {});
+  /** What can be added ("Add app"); with a machine, only what it can run and doesn't have. */
+  catalogue = (machineId?: string) => this.rest.get<Catalogue>("/updates/catalogue", machineId ? { machine: machineId } : undefined);
 
   /** Uploads a package with its minisign signature (admins); the server checks the signature. */
   async upload(file: Blob, fileName: string, signature: string, auth: RawAuth): Promise<UpdatePackage> {

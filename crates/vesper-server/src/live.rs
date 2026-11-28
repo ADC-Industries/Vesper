@@ -634,6 +634,25 @@ mod tests {
     }
 
     #[test]
+    fn a_songselect_song_fills_the_copyright_line() {
+        // Made up. The licence number is the settings', not the file's.
+        let song = model::songselect::parse_lyrics(
+            "Morning Song\n\nVerse 1\nWords\n\nA. Writer | B. Writer\nCCLI Song # 1234567\n\
+             © 2001 Example Music\nCCLI License # 1112223\n",
+        );
+        let info = song.song_info().unwrap();
+        assert!(info.display);
+        let ccli = model::CcliSettings {
+            license_number: Some("7654321".into()),
+            ..model::CcliSettings::default()
+        };
+        assert_eq!(
+            ccli_line(&info, &ccli),
+            "Morning Song\nA. Writer, B. Writer\n© 2001 Example Music\nCCLI Song # 1234567\nCCLI Licence # 7654321"
+        );
+    }
+
+    #[test]
     fn ccli_line_slides_follow_show_on() {
         use model::CcliDisplay as D;
         let on = |d, len| {

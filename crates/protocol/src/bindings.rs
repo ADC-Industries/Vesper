@@ -156,6 +156,9 @@ pub fn export_all(out_dir: &Path) -> Result<Vec<String>, ExportError> {
         crate::LauncherAction,
         crate::LauncherActions,
         crate::LauncherJoinCode,
+        crate::GithubSettings,
+        crate::GithubReleases,
+        crate::Catalogue,
         // Mosaic (the site's display boxes and channels)
         crate::MosaicState,
         crate::PutMosaicBox,
@@ -284,6 +287,9 @@ pub fn export_all(out_dir: &Path) -> Result<Vec<String>, ExportError> {
         crate::CcliReport,
         crate::ChordProParse,
         crate::ChordProParsed,
+        // SongSelect files and pasted lyrics
+        crate::SongSelectParse,
+        crate::SongSelectParsed,
         // PowerPoint / Keynote / Google Slides import
         crate::PptxImportJob,
         // Machine translation (second-language slides)

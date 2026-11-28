@@ -20,6 +20,8 @@ vesper-codex = { path = "../vesper-codex" }
 vesper-scripture = { path = "../vesper-scripture" }
 # The update channel checks packages with the Launcher's signature code (G10).
 vesper-launcher = { path = "../vesper-launcher" }
+# Vesper's releases on GitHub, for the site's update channel (`releases`).
+vesper-releases = { path = "../vesper-releases" }
 base64 = "0.22.1"
 model = { path = "../model" }
 protocol = { path = "../protocol", features = ["discover"] }
@@ -30,9 +32,10 @@ audio = { path = "../audio" }
 # The site's Site Manager (run by `vesper-site`) and the IDN library's types the Codex uses.
 idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
 idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
-# Live captions (docs/CAPTIONS-PLAN.md): whisper.cpp on the CPU. Without the crate's `gpu`
-# feature: its Vulkan backend would be a second Vulkan instance in the server process (see the
-# render crate's docs on the loader race) and needs the Vulkan SDK to build on Windows.
+# Live captions (docs/CAPTIONS-PLAN.md): whisper.cpp in IDN's captions worker process (the
+# `vesper` binary). On the GPU through Vulkan with the crate's `gpu` feature: on Linux always
+# (below), elsewhere with this crate's `gpu-captions` feature (building it needs the Vulkan
+# headers and glslc). whisper's Vulkan instance lives in the worker, never in the server.
 idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }
 # Recording and streaming (`gateways`): IDN's FFmpeg gateway (the system FFmpeg the media
 # crate links anyway; also the live-source tests' H.264 test source).
@@ -76,6 +79,9 @@ libc = "0.2.191"
 # Display outputs: DRM connectors and their modes (the same crate wgpu's DRM surfaces use).
 [target.'cfg(target_os = "linux")'.dependencies]
 drm = "0.15"
+# Captions on the GPU on Linux (Vulkan: `libvulkan-dev` and `glslc` to build; at run time the
+# Vulkan loader the renderer already needs). A box without a Vulkan GPU runs whisper on the CPU.
+idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false, features = ["gpu"] }
 
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
 # Display outputs as windows (Windows, Linux desktops): one event loop thread, a window per
@@ -88,6 +94,8 @@ windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Stora
 
 [dev-dependencies]
 tokio-tungstenite = "0.30.0"
+# A fake GitHub for the release checker's tests.
+vesper-releases = { path = "../vesper-releases", features = ["fake"] }
 
 # The two memory pieces are independent (docs/SOAK-PLAN.md, lane M): drop one from `default`
 # to build without it.
@@ -99,3 +107,6 @@ mimalloc = ["dep:mimalloc", "dep:libmimalloc-sys"]
 # glibc's malloc tuned for the C libraries: fixed mmap threshold, at most 4 arenas
 # (`heap::tune_glibc`; Linux with glibc only, nothing elsewhere).
 glibc-tuning = []
+# whisper (captions) on the GPU through Vulkan where it isn't already (on Linux it always is):
+# Windows needs the Vulkan SDK's headers and glslc for the build (docs/PACKAGING.md).
+gpu-captions = ["idn-captions/gpu"]

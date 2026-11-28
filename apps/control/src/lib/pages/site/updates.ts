@@ -2,7 +2,7 @@
 // update channel's packages. Pure functions (tested in updates.test.ts).
 
 import type { Status } from "../../ui/types";
-import type { LauncherAction, LauncherEntry, LauncherProduct, MachineHealth, ProductState, UpdateOutcome, UpdatePackage } from "$protocol";
+import type { CatalogueProduct, GithubReleases, LauncherAction, LauncherEntry, LauncherProduct, MachineHealth, ProductState, UpdateOutcome, UpdatePackage } from "$protocol";
 
 const STATE: Record<ProductState, string> = {
   running: "Running",
@@ -43,7 +43,7 @@ export function updateFor(e: LauncherEntry, product: string): string | null {
 export function pendingFor(e: LauncherEntry, product: string): string | null {
   const a = e.pending.find((p: LauncherAction) => p.product === product);
   if (!a) return null;
-  return a.type === "update" ? `Update to ${a.version} queued` : "Roll back queued";
+  return a.type === "update" ? `Update to ${a.version} queued` : a.type === "install" ? `Adding ${a.version} queued` : "Roll back queued";
 }
 
 /** A product can be acted on: its machine is online and nothing is queued or running for it. */
@@ -117,9 +117,48 @@ export function roleLabel(r: string): string {
   return ROLES[r] ?? r;
 }
 
-const PRODUCTS: Record<string, string> = { vesper: "Vesper", oriel: "Vesper Oriel", launcher: "Vesper Launcher" };
+const PRODUCTS: Record<string, string> = {
+  vesper: "Vesper",
+  oriel: "Vesper Oriel",
+  "vesper-oriel": "Vesper Oriel",
+  launcher: "Vesper Launcher",
+  "vesper-launcher": "Vesper Launcher",
+  "vesper-launcher-tray": "Vesper Launcher tray",
+  "vesper-idn-node": "IDN Node (bundled)",
+};
 
 /** A package's product for people. */
 export function productName(p: string): string {
   return PRODUCTS[p] ?? p;
+}
+
+/** "Add app" queued on a machine, in words ("Adding Vesper Oriel 0.2.0 (queued)"). */
+export function queuedAdds(e: LauncherEntry): string[] {
+  return e.pending.flatMap((a) => (a.type === "install" ? [`Adding ${productName(a.product)} ${a.version} (queued)`] : []));
+}
+
+/** The version "Add app" installs: the newest stable, else the beta. */
+export function addVersion(c: CatalogueProduct): string | null {
+  return c.stable ?? c.beta ?? null;
+}
+
+/** Where a product comes from, in words ("the update channel or GitHub"). */
+export function sourcesText(c: CatalogueProduct): string {
+  return c.sources.map((s) => (s === "channel" ? "the update channel" : s === "github" ? "GitHub" : s)).join(" or ");
+}
+
+/** Where a package came from: "GitHub" or "Uploaded". */
+export function packageSource(p: UpdatePackage): string {
+  return p.source === "github" ? "GitHub" : "Uploaded";
+}
+
+/** The GitHub check in one line ("Checked 10:02 · next 16:02", "Off", the last error). */
+export function githubLine(g: GithubReleases, when: (iso: string) => string): string {
+  if (!g.settings.enabled) return "Off: new releases aren't looked for.";
+  if (g.checking) return "Checking GitHub now…";
+  const parts: string[] = [];
+  if (g.lastSuccess) parts.push(`Last checked ${when(g.lastSuccess)}`);
+  else if (!g.lastCheck) parts.push("Not checked yet");
+  if (g.nextCheck) parts.push(`next ${when(g.nextCheck)}`);
+  return parts.join(" · ");
 }

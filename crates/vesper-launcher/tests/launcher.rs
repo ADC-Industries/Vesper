@@ -1187,6 +1187,8 @@ async fn a_display_box_joins_from_the_command_line_and_its_roles_are_acted_on() 
         "keyDir": null,
         "machineName": "Lobby Box",
         "checkIntervalSecs": 1,
+        // Not joined yet: it would check GitHub itself (never from a test).
+        "github": {"enabled": false},
         "products": [{
             "product": "vesper",
             "name": "Vesper",
@@ -1780,4 +1782,239 @@ fn products_come_from_the_configuration_and_its_folder() {
     assert_eq!(c.path.as_deref(), Some(main.as_path()));
     let l = Launcher::open(c).unwrap();
     assert_eq!(l.roles(), ["presentation"]);
+}
+
+// ---- Releases from GitHub: the direct mode and "Add app" (a fake GitHub, a throwaway key) ----
+
+fn github_config(
+    fake: &vesper_releases::fake::FakeGitHub,
+) -> vesper_launcher::github::GithubConfig {
+    serde_json::from_value(serde_json::json!({
+        "api": fake.api(), "repository": "example/vesper", "channel": "stable",
+    }))
+    .unwrap()
+}
+
+/// The fake product as the Vesper server (`vesper`, folder kind), version `version`.
+fn server_package(port: u16, version: &str) -> Vec<u8> {
+    let exe = std::env::current_exe().unwrap();
+    format!(
+        "#!/bin/sh\nVESPER_FAKE_PRODUCT_PORT={port} VESPER_FAKE_PRODUCT_VERSION={version} exec '{}' fake_product --exact --nocapture --test-threads=1\n",
+        exe.display()
+    )
+    .into_bytes()
+}
+
+/// A Launcher with no church server checks GitHub itself: it offers the newest stable release
+/// of its products, downloads and verifies it, and installs it with the usual health check;
+/// a package signed by another key is refused.
+#[tokio::test(flavor = "multi_thread")]
+async fn without_a_church_server_the_launcher_updates_from_github() {
+    let fake = vesper_releases::fake::FakeGitHub::start();
+    let platform = this_platform();
+    let dir = tempfile::tempdir().unwrap();
+    let port = free_port();
+    let v1 = server_package(port, "1.1.0");
+    fake.release(
+        "server-v1.1.0",
+        "1.1.0",
+        false,
+        &[("vesper", platform.as_str(), "vesper-1.1.0", &v1)],
+    );
+    let beta = server_package(port, "1.2.0-beta1");
+    fake.release(
+        "server-v1.2.0-beta1",
+        "1.2.0-beta1",
+        true,
+        &[("vesper", platform.as_str(), "vesper-1.2.0-beta1", &beta)],
+    );
+    let mut cfg: Config = serde_json::from_value(serde_json::json!({
+        "stateDir": dir.path().join("state"),
+        "listen": "127.0.0.1:0",
+        "keyDir": null,
+        "keys": [fake.public_key()],
+        "healthTimeoutSecs": 4,
+        "products": [{
+            "product": "vesper", "name": "Vesper", "install": {"kind": "dir"},
+            "healthUrl": format!("http://127.0.0.1:{port}/api/v1/server"),
+        }],
+    }))
+    .unwrap();
+    cfg.github = github_config(&fake);
+    let l = Launcher::open(cfg).unwrap();
+    // 1.0.0 installed by hand first.
+    let v0 = server_package(port, "1.0.0");
+    let p0 = dir.path().join("vesper-1.0.0");
+    std::fs::write(&p0, &v0).unwrap();
+    l.add_package(
+        &p0,
+        "vesper-1.0.0",
+        &fake.sign(&v0, "vesper", "1.0.0", &platform),
+    )
+    .unwrap();
+    assert_eq!(
+        l.update("vesper", "1.0.0").await.unwrap().result,
+        UpdateResult::Installed
+    );
+
+    assert!(l.github_direct(), "no channel: GitHub directly");
+    l.check_github().await;
+    let ov = serde_json::to_value(l.overview()).unwrap();
+    assert_eq!(ov["github"]["direct"], serde_json::json!(true));
+    assert!(ov["github"]["status"]["lastSuccess"].is_string(), "{ov}");
+    // The stable channel: not the beta.
+    assert_eq!(
+        ov["available"]["vesper"],
+        serde_json::json!("1.1.0"),
+        "{ov}"
+    );
+    // The next check waits for the interval: nothing is asked again.
+    let asked = fake.listings().len();
+    l.check_github().await;
+    assert_eq!(fake.listings().len(), asked);
+
+    let a = protocol::LauncherAction::Update {
+        product: "vesper".into(),
+        version: "1.1.0".into(),
+    };
+    let o = vesper_launcher::channel::run_action(&l, &a).await.unwrap();
+    assert_eq!(o.result, UpdateResult::Installed, "{o:?}");
+    assert_eq!(reported_version(port).as_deref(), Some("1.1.0"));
+
+    // Signed by someone else: refused before anything changes.
+    let stranger = TestSigner::generate();
+    let bad = server_package(port, "1.3.0");
+    let comment = PackageMeta {
+        product: "vesper".into(),
+        version: "1.3.0".into(),
+        platform: platform.clone(),
+    }
+    .comment();
+    fake.raw_release(
+        "server-v1.3.0",
+        false,
+        false,
+        vec![
+            ("vesper-1.3.0".into(), bad.clone()),
+            (
+                "vesper-1.3.0.minisig".into(),
+                stranger.sign(&Hasher::bytes(&bad), &comment).into_bytes(),
+            ),
+            (
+                "manifest.json".into(),
+                serde_json::to_vec(&serde_json::json!({"assets": [
+                    {"product": "vesper", "platform": platform, "file": "vesper-1.3.0"}]}))
+                .unwrap(),
+            ),
+        ],
+    );
+    let a = protocol::LauncherAction::Update {
+        product: "vesper".into(),
+        version: "1.3.0".into(),
+    };
+    let e = vesper_launcher::channel::run_action(&l, &a)
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("isn't one of"), "{e}");
+    assert_eq!(l.installed("vesper").version.as_deref(), Some("1.1.0"));
+    l.shutdown().await;
+}
+
+/// "Add app" in the Launcher's own window: the catalogue offers only what this machine can run
+/// and doesn't have; the install downloads from GitHub (no church server), verifies and
+/// installs it, and the Launcher manages the product from then on, also after a restart.
+#[tokio::test(flavor = "multi_thread")]
+async fn add_app_installs_a_product_this_machine_can_run() {
+    let fake = vesper_releases::fake::FakeGitHub::start();
+    let linux = "linux-x86_64";
+    fake.release(
+        "oriel-v0.2.0",
+        "0.2.0",
+        false,
+        &[
+            (
+                "vesper-oriel",
+                linux,
+                "vesper-oriel_0.2.0_amd64.deb",
+                b"version=0.2.0\n",
+            ),
+            (
+                "vesper-oriel",
+                "windows-x86_64",
+                "vesper-oriel_0.2.0_x64-setup.exe",
+                b"exe",
+            ),
+        ],
+    );
+    fake.release(
+        "server-v0.2.0",
+        "0.2.0",
+        false,
+        &[(
+            "vesper",
+            linux,
+            "vesper_0.2.0-2_amd64.deb",
+            b"version=0.2.0\n",
+        )],
+    );
+    let fx = deb_fixture("");
+    let mut cfg = fx.cfg.clone();
+    cfg.products.clear();
+    cfg.platform = Some(linux.into());
+    cfg.roles = vec!["display".into()];
+    cfg.keys.push(fake.public_key());
+    cfg.github = github_config(&fake);
+    let l = Launcher::open(cfg.clone()).unwrap();
+    let cat = tokio::task::spawn_blocking({
+        let l = l.clone();
+        move || l.catalogue()
+    })
+    .await
+    .unwrap()
+    .unwrap();
+    let ids: Vec<&str> = cat.iter().map(|c| c.product.as_str()).collect();
+    // A display box: no Vesper server.
+    assert_eq!(ids, ["vesper-oriel"]);
+    assert_eq!(cat[0].stable.as_deref(), Some("0.2.0"));
+
+    let add = |product: &str| protocol::LauncherAction::Install {
+        product: product.into(),
+        version: "0.2.0".into(),
+    };
+    let o = vesper_launcher::channel::run_action(&l, &add("vesper-oriel"))
+        .await
+        .unwrap();
+    assert_eq!(o.result, UpdateResult::Installed, "{o:?}");
+    assert_eq!(
+        l.installed("vesper-oriel").version.as_deref(),
+        Some("0.2.0")
+    );
+    assert!(
+        l.report()
+            .products
+            .iter()
+            .any(|p| p.product == "vesper-oriel")
+    );
+    assert!(
+        fx.calls().contains("vesper-oriel_0.2.0_amd64.deb"),
+        "{}",
+        fx.calls()
+    );
+    // Not twice; not what the machine can't run.
+    let e = vesper_launcher::channel::run_action(&l, &add("vesper-oriel"))
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("already installed"), "{e}");
+    let e = vesper_launcher::channel::run_action(&l, &add("vesper"))
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("display box"), "{e}");
+    let e = vesper_launcher::channel::run_action(&l, &add("vesper-launcher"))
+        .await
+        .unwrap_err();
+    assert!(e.to_string().contains("can't be added"), "{e}");
+    // Kept across a restart.
+    l.shutdown().await;
+    let again = Launcher::open(cfg).unwrap();
+    assert!(again.products().iter().any(|p| p.product == "vesper-oriel"));
 }

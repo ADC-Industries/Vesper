@@ -1,15 +1,15 @@
 <script lang="ts">
   // Settings ▸ Captions (docs/CAPTIONS-PLAN.md): live captions on this server. Speech from the
-  // program audio or a live source turned into text on the server (whisper, on its CPU), or
-  // lines from another captioner; the language, the model, words to spell right, the box's
-  // style and where captions go. Stored on the server and applied at once.
+  // program audio or a live source turned into text on the server (whisper, on its GPU or CPU),
+  // or lines from another captioner; the language, the model, the processor, words to spell
+  // right, the box's style and where captions go. Stored on the server and applied at once.
   import type { CaptionModel, CaptionsConfig, CaptionPosition, Color } from "$protocol";
   import Button from "../../ui/Button.svelte";
   import { ApiRequestError } from "../../server";
   import { session } from "../../state/session.svelte";
   import { sourcesState } from "../../state/sources.svelte";
   import { useLive } from "../../live";
-  import { captionStatus, downloadBar, modelOptions, sourceOf, sourceValue, withDefaults } from "../show/captions";
+  import { PROCESSOR_OPTIONS, captionStatus, downloadBar, modelOptions, processorInUse, sourceOf, sourceValue, withDefaults } from "../show/captions";
   import { sourceName } from "../show/sources";
 
   const captions = useLive().captions;
@@ -23,6 +23,7 @@
 
   let status = $derived(captionStatus($captions));
   let download = $derived(downloadBar($captions));
+  let inUse = $derived(processorInUse($captions));
   let dirty = $derived(!!draft && !!saved && JSON.stringify(draft) !== JSON.stringify(saved));
   let source = $derived(sourceValue(draft?.source));
   let options = $derived(modelOptions(models, draft?.language ?? "en"));
@@ -92,6 +93,9 @@
     <span class="dot"></span>
     <span class="text">{status.text}{$captions?.device && $captions.status === "running" && $captions.model ? ` · ${$captions.device}` : ""}</span>
   </div>
+  {#if $captions?.enabled && $captions.note}
+    <p class="note-warn" data-testid="captions-note">{$captions.note}</p>
+  {/if}
   {#if download}
     <div class="download" data-testid="captions-download">
       <div
@@ -143,6 +147,25 @@
           {/each}
         </select>
       </label>
+      <label class="fld">
+        <span>Processor</span>
+        <select bind:value={draft.processor} disabled={source === "external"} data-testid="captions-processor">
+          {#each PROCESSOR_OPTIONS as o (o.value)}
+            <option value={o.value}>{o.label}</option>
+          {/each}
+        </select>
+      </label>
+      <div class="fld">
+        <span>In use</span>
+        <span class="in-use" data-testid="captions-in-use">{inUse ?? "—"}</span>
+      </div>
+      {#if draft.processor === "gpu" && source !== "external"}
+        <p class="hint wide" data-testid="captions-gpu-hint">
+          On the GPU, speech recognition shares the graphics chip with the screens. Where the screens render on the same GPU
+          (a built-in one above all), frames come late while someone speaks over video. Choose the GPU only for a separate card
+          the screens don't use; the CPU runs at the lowest priority and leaves the screens alone.
+        </p>
+      {/if}
       <label class="fld wide">
         <span>Names and words to spell right</span>
         <input type="text" bind:value={draft.words} placeholder="Pastor Example, Ephesians" maxlength="1000" disabled={source === "external"} />
@@ -205,7 +228,8 @@
   <p class="note">
     Speech is recognised on the server; nothing but the text leaves it. The model is fetched once, when captions first start
     (75 MB to 1.6 GB, into the server's cache folder); Automatic measures the server and takes the largest model that keeps
-    up. Languages other than English need the large model, which wants a fast machine.
+    up on the processor in use. Languages other than English need the large model, which wants a GPU or a fast machine. If
+    the GPU fails, captions carry on on the CPU.
   </p>
 </div>
 
@@ -286,6 +310,26 @@
   }
   .err {
     margin: 0;
+  }
+  .note-warn {
+    margin: -4px 0 0;
+    color: var(--warn);
+    font-size: 12.5px;
+  }
+  .hint {
+    margin: 0;
+    color: var(--warn);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .in-use {
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    color: var(--text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   h3 {
     margin: 4px 0 0;

@@ -16,4 +16,12 @@ version: string, } | { "type": "rollback",
 /**
  * The product.
  */
-product: string, };
+product: string, } | { "type": "install", 
+/**
+ * The product.
+ */
+product: string, 
+/**
+ * The version.
+ */
+version: string, };

@@ -8,6 +8,10 @@
 // header must be base64 of a minisign file whose trusted comment is
 // `vesper-package product=… version=… platform=…`.
 //
+// Releases from GitHub: the server's check (on, stable, checked 42 minutes ago; one package came
+// from it) and the catalogue "Add app" offers (Vesper, Vesper Oriel, the bundled IDN Node),
+// filtered per machine as the server does (platform, role, what it has).
+//
 // Stub control (not part of the API): `POST /api/v1/__stub/updates` with
 //   {"reset": true}   everything as at start
 //   {"apply": true}   every machine's queued actions "happen" (as its Launcher would)
@@ -41,11 +45,38 @@ const health = (cpu, memFree, mem, diskFree, disk, gpus) => ({
   gpus,
 });
 
+const CATALOGUE = [
+  { product: "vesper", name: "Vesper", stable: "0.2.0", beta: "0.3.0-beta1", platforms: ["linux-x86_64", "windows-x86_64"], sources: ["channel", "github"] },
+  { product: "vesper-idn-node", name: "IDN Node (bundled)", stable: "0.3.8-beta18", platforms: ["linux-x86_64"], sources: ["github"] },
+  { product: "vesper-oriel", name: "Vesper Oriel", stable: "0.2.0", platforms: ["linux-x86_64", "linux-x86_64-appimage", "windows-x86_64"], sources: ["github"] },
+];
+
+/** What a machine can add (as the server's `offered`). */
+function offered(k) {
+  const { platform, roles, products } = k.report;
+  const linux = platform.startsWith("linux-");
+  return CATALOGUE.filter(
+    (c) =>
+      c.platforms.includes(platform) &&
+      !products.some((p) => p.product === c.product && p.version) &&
+      (c.product === "vesper" || linux) &&
+      !(c.product === "vesper" && roles.includes("display")),
+  );
+}
+
 function initial() {
   NOW = Date.now();
   return {
+    github: {
+      settings: { enabled: true, repository: "ADC-Industries/Vesper", channel: "stable", intervalHours: 6 },
+      lastCheck: at(42),
+      lastSuccess: at(42),
+      nextCheck: new Date(NOW + 318 * 60_000).toISOString(),
+      added: ["vesper 0.2.0 for linux-x86_64"],
+      checking: false,
+    },
     packages: [
-      pkg("7c1e93a0b24d5f61", "vesper", "0.2.0", "linux-x86_64", 48_211_456, 90),
+      { ...pkg("7c1e93a0b24d5f61", "vesper", "0.2.0", "linux-x86_64", 48_211_456, 90), source: "github" },
       pkg("2f0d6e8b9a137c45", "vesper", "0.1.0", "linux-x86_64", 47_002_112, 30 * 1440),
       pkg("b83a45c1d09e2f76", "vesper", "0.2.0", "windows-x86_64", 61_884_416, 88),
     ],
@@ -139,6 +170,12 @@ function entry(k) {
 function apply() {
   for (const k of st.launchers) {
     for (const a of k.pending) {
+      if (a.type === "install") {
+        const c = CATALOGUE.find((x) => x.product === a.product);
+        const to = { from: undefined, to: a.version, result: "installed", message: "", at: new Date().toISOString() };
+        k.report.products.push({ product: a.product, name: c?.name ?? a.product, version: a.version, state: "running", restarts: 0, lastUpdate: to });
+        continue;
+      }
       const p = k.report.products.find((x) => x.product === a.product);
       if (!p) continue;
       if (a.type === "update") {
@@ -204,6 +241,33 @@ export default function updatesRoutes(ctx) {
       st.packages.splice(i, 1);
       res.writeHead(204);
       res.end();
+      return true;
+    }
+    if (path === "/updates/github" && m === "GET") {
+      json(res, 200, st.github);
+      return true;
+    }
+    if (path === "/updates/github" && m === "PUT") {
+      readBody(req, (b) => {
+        const v = JSON.parse(b.toString() || "{}");
+        if (!/^[\w.-]+\/[\w.-]+$/.test(v.repository ?? "")) return apiError(res, 400, "badRequest", "the repository is owner/name, as on GitHub");
+        st.github = { ...st.github, settings: v, error: undefined };
+        json(res, 200, st.github);
+      });
+      return true;
+    }
+    if (path === "/updates/github/check" && m === "POST") {
+      if (!st.github.settings.enabled) return apiError(res, 409, "conflict", "checking GitHub is off: turn it on first"), true;
+      st.github = { ...st.github, lastCheck: new Date().toISOString(), lastSuccess: new Date().toISOString() };
+      json(res, 202, st.github);
+      return true;
+    }
+    if (path === "/updates/catalogue" && m === "GET") {
+      const id = query.get("machine");
+      if (!id) return json(res, 200, { products: CATALOGUE }), true;
+      const k = st.launchers.find((x) => x.report.machineId === id);
+      if (!k) return apiError(res, 404, "notFound", "no Launcher with that machine ID has reported"), true;
+      json(res, 200, { products: offered(k) });
       return true;
     }
     if (parts[1] === "launchers" && parts[3] === "actions" && m === "POST") {

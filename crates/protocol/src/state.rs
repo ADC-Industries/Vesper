@@ -93,8 +93,15 @@ pub struct CaptionsState {
     pub download_size: Option<u64>,
     /// The model in use (`base.en`, …).
     pub model: Option<String>,
-    /// What whisper runs on ("CPU (14 threads)").
+    /// What whisper runs on: the GPU's name, or "CPU (8 threads)".
     pub device: Option<String>,
+    /// `device` is a GPU (while running; servers before GPU captions leave it out).
+    #[serde(default)]
+    pub gpu: Option<bool>,
+    /// Why whisper isn't on the processor chosen (`CaptionsConfig.processor`): no GPU, or the
+    /// GPU failed and captions run on the CPU instead.
+    #[serde(default)]
+    pub note: Option<String>,
     /// Work per second of sound (below 1: it keeps up), rounded to hundredths.
     pub load: Option<f64>,
     /// The lines on screen, oldest first (the last may be a draft still being corrected).

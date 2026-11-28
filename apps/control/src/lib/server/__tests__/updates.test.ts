@@ -16,6 +16,27 @@ describe("UpdatesClient", () => {
     expect(calls[0]).toEqual({ url: "http://booth:5555/api/v1/updates/launchers/m%201/actions", method: "POST", body: { type: "update", product: "vesper", version: "0.2.0" } });
   });
 
+  it("reads and sets the GitHub releases check, and asks a machine's catalogue", async () => {
+    const calls: { url: string; method: string; body: unknown }[] = [];
+    const fakeFetch = (async (url: string, init: RequestInit = {}) => {
+      calls.push({ url, method: init.method ?? "GET", body: init.body ? JSON.parse(String(init.body)) : undefined });
+      return new Response(JSON.stringify({ products: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const c = new UpdatesClient(new RestClient({ baseUrl: "http://booth:5555", token: () => null, fetch: fakeFetch }));
+    const settings = { enabled: false, repository: "example/vesper", channel: "beta" as const, intervalHours: 12 };
+    await c.setGithub(settings);
+    await c.checkGithub();
+    await c.catalogue("m 1");
+    await c.catalogue();
+    expect(calls.map((x) => `${x.method} ${x.url}`)).toEqual([
+      "PUT http://booth:5555/api/v1/updates/github",
+      "POST http://booth:5555/api/v1/updates/github/check",
+      "GET http://booth:5555/api/v1/updates/catalogue?machine=m+1",
+      "GET http://booth:5555/api/v1/updates/catalogue",
+    ]);
+    expect(calls[0]!.body).toEqual(settings);
+  });
+
   it("uploads a package with its signature, base64 in a header", async () => {
     const sig = "untrusted comment: signature\nRUQ=\ntrusted comment: vesper-package product=vesper version=0.2.0 platform=linux-x86_64\nAAAA\n";
     let seen: { url: string; headers: Record<string, string>; body: unknown } | null = null;

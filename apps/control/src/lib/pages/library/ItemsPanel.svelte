@@ -302,6 +302,7 @@
     {:else if view.kind === "songs"}
       <Button size="sm" variant="outline" disabled={readOnly} onclick={() => session.newPresentation()}>+ New song</Button>
       <Button size="sm" variant="ghost" disabled={readOnly} title="A song with chords from a ChordPro file or pasted text" onclick={() => shell.appAction("importChordPro")} data-testid="import-chordpro">Import ChordPro…</Button>
+      <Button size="sm" variant="ghost" disabled={readOnly} title="Songs downloaded from CCLI SongSelect (lyrics .txt, ChordPro, .usr) or pasted SongSelect lyrics" onclick={() => shell.appAction("importSongSelect")} data-testid="import-songselect">Import SongSelect…</Button>
     {:else if view.kind === "themes"}
       <Button size="sm" variant="outline" disabled={readOnly || libraryPage.busy} onclick={() => libraryPage.createTheme()}>+ New theme</Button>
     {:else if view.kind === "media"}

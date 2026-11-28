@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { CaptionsState } from "$protocol";
-import { captionStatus, downloadBar, lastLine, modelOptions, sourceOf, sourceValue, withDefaults } from "./captions";
+import { captionStatus, downloadBar, lastLine, modelOptions, processorInUse, sourceOf, sourceValue, withDefaults } from "./captions";
 
-const base: CaptionsState = { enabled: true, status: "running", detail: null, progress: null, downloaded: null, downloadSize: null, model: "base.en", device: "CPU (6 threads)", load: 0.31, lines: [] };
+const base: CaptionsState = { enabled: true, status: "running", detail: null, progress: null, downloaded: null, downloadSize: null, model: "base.en", device: "CPU (6 threads)", gpu: false, note: null, load: 0.31, lines: [] };
 
 describe("captions", () => {
   it("says what the engine is doing", () => {
@@ -52,9 +52,20 @@ describe("captions", () => {
     expect(modelOptions(models, "en")[2]!.label).toContain("1.6 GB");
   });
 
+  it("says what speech recognition runs on", () => {
+    expect(processorInUse(base)).toBe("CPU (6 threads)");
+    expect(processorInUse({ ...base, device: "Synthetic GPU 1", gpu: true })).toBe("GPU · Synthetic GPU 1");
+    expect(processorInUse({ ...base, status: "starting" })).toBeNull();
+    expect(processorInUse({ ...base, enabled: false })).toBeNull();
+    expect(processorInUse(null)).toBeNull();
+    // A server from before GPU captions: no `gpu`, the device alone.
+    const { gpu: _gpu, note: _note, ...old } = base;
+    expect(processorInUse(old as CaptionsState)).toBe("CPU (6 threads)");
+  });
+
   it("fills in the defaults the server leaves out", () => {
     const c = withDefaults({ schemaVersion: 2, enabled: true, maxLines: 3 });
-    expect(c).toMatchObject({ enabled: true, maxLines: 3, language: "en", model: "auto", source: { type: "program" }, audience: true, stage: false });
+    expect(c).toMatchObject({ enabled: true, maxLines: 3, language: "en", model: "auto", processor: "cpu", source: { type: "program" }, audience: true, stage: false });
     expect(withDefaults(c)).toEqual(c);
   });
 });

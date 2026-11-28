@@ -36,6 +36,11 @@ pub struct UpdatePackage {
     pub trusted_comment: String,
     /// When it was uploaded (RFC 3339 UTC).
     pub uploaded_at: String,
+    /// Where it came from: `github` (the server's GitHub release checker, [`GithubReleases`]);
+    /// absent: uploaded by an admin.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub source: Option<String>,
 }
 
 /// What a product is doing on its machine.
@@ -189,6 +194,14 @@ pub enum LauncherAction {
         /// The product.
         product: String,
     },
+    /// "Add app": install `product`, which the machine doesn't have yet, at `version` (from the
+    /// site's update channel, else from GitHub when the Launcher checks GitHub itself).
+    Install {
+        /// The product.
+        product: String,
+        /// The version.
+        version: String,
+    },
 }
 
 /// The answer to a Launcher's report: the actions queued for it (each is given out once).
@@ -239,4 +252,103 @@ pub struct LauncherEntry {
     /// Newer versions in the channel for its products.
     #[serde(default)]
     pub updates: Vec<AvailableUpdate>,
+}
+
+/// A release channel on GitHub: `stable` takes normal releases only, `beta` pre-releases too.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum ReleaseChannel {
+    /// Normal releases.
+    #[default]
+    Stable,
+    /// Pre-releases as well.
+    Beta,
+}
+
+/// Checking Vesper's releases on GitHub (the server's `GET`/`PUT
+/// /api/v1/updates/github`; the Launcher's own when it has no church server).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GithubSettings {
+    /// Check at all (the off switch).
+    pub enabled: bool,
+    /// The repository (`owner/name`).
+    pub repository: String,
+    /// Which releases.
+    pub channel: ReleaseChannel,
+    /// Hours between checks (1–168).
+    pub interval_hours: u32,
+}
+
+impl Default for GithubSettings {
+    fn default() -> Self {
+        GithubSettings {
+            enabled: true,
+            repository: "ADC-Industries/Vesper".into(),
+            channel: ReleaseChannel::Stable,
+            interval_hours: 6,
+        }
+    }
+}
+
+/// What checking GitHub found last (`GET /api/v1/updates/github`).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct GithubReleases {
+    /// The settings.
+    pub settings: GithubSettings,
+    /// When it last checked (RFC 3339 UTC).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub last_check: Option<String>,
+    /// When the last check worked.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub last_success: Option<String>,
+    /// What went wrong with the last check (offline, rate-limited, a refused package).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub error: Option<String>,
+    /// When it checks next.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub next_check: Option<String>,
+    /// The packages the last checks brought in (`<product> <version> <platform>`, newest first,
+    /// at most 20).
+    #[serde(default)]
+    pub added: Vec<String>,
+    /// A check is running now.
+    #[serde(default)]
+    pub checking: bool,
+}
+
+/// A product that can be added to a machine ("Add app"; `GET /api/v1/updates/catalogue`, the
+/// Launcher's `GET /launcher/v1/catalogue`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogueProduct {
+    /// Its ID (`vesper`, `vesper-oriel`, …).
+    pub product: String,
+    /// Its name for people.
+    pub name: String,
+    /// The newest stable version.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub stable: Option<String>,
+    /// The newest beta, when newer than the newest stable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub beta: Option<String>,
+    /// The platforms it has packages for.
+    pub platforms: Vec<String>,
+    /// Where it comes from: `channel` (the site's update channel has it), `github`, or both.
+    pub sources: Vec<String>,
+}
+
+/// The products that can be added.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct Catalogue {
+    /// By name.
+    pub products: Vec<CatalogueProduct>,
 }

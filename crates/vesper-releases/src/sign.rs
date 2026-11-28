@@ -28,7 +28,7 @@ use std::fmt;
 ///   kept offline; it signs only a release that replaces the automation key (if it is ever lost
 ///   or exposed).
 ///
-/// More keys come from the admin-only key folder ([`crate::config::Config::key_dir`]) and, on
+/// More keys come from the admin-only key folder (the Launcher's `Config::key_dir`) and, on
 /// the Vesper server, `--update-key`.
 pub const RELEASE_KEYS: &[&str] = &[
     include_str!("../../../packaging/keys/vesper-automation.pub"),

@@ -129,6 +129,8 @@ install -m 0644 "$scripture"/*.vbible "$pkg/usr/share/vesper/scripture/"
 [[ -f "$scripture/SOURCES.txt" ]] && install -D -m 0644 "$scripture/SOURCES.txt" "$pkg/usr/share/doc/vesper/SCRIPTURE-SOURCES.txt"
 install -D -m 0644 "$root/COPYRIGHT" "$pkg/usr/share/doc/vesper/copyright"
 install -m 0644 "$root/LICENSE-MIT" "$root/LICENSE-APACHE" "$pkg/usr/share/doc/vesper/"
+# The ProPresenter 7 schemas compiled into the importer: their source and MIT licence.
+install -m 0644 "$root/crates/pro-import/PROTO.md" "$pkg/usr/share/doc/vesper/PROPRESENTER-SCHEMAS.md"
 install -m 0644 "$root/docs/PACKAGING.md" "$pkg/usr/share/doc/vesper/"
 for s in postinst prerm postrm; do install -m 0755 "$here/debian/$s" "$pkg/DEBIAN/$s"; done
 printf '%s\n' /etc/default/vesper /etc/vesper/launcher.d/vesper.json > "$pkg/DEBIAN/conffiles"

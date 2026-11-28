@@ -88,6 +88,11 @@ impl Updates {
         })
     }
 
+    /// The update keys packages are checked with.
+    pub fn keys(&self) -> &[PublicKey] {
+        &self.keys
+    }
+
     /// The folder uploads are written to before they are checked.
     pub fn staging(&self) -> std::io::Result<PathBuf> {
         let d = self.dir.join(".incoming");
@@ -123,6 +128,18 @@ impl Updates {
         file_name: &str,
         sig_text: &str,
     ) -> Result<UpdatePackage, ApiError> {
+        self.add_from(tmp, digests, file_name, sig_text, None)
+    }
+
+    /// [`Updates::add`], noting where the package came from (`github`; `None`: an upload).
+    pub fn add_from(
+        &self,
+        tmp: &Path,
+        digests: &Digests,
+        file_name: &str,
+        sig_text: &str,
+        source: Option<&str>,
+    ) -> Result<UpdatePackage, ApiError> {
         let v = package::verify(&self.keys, digests, sig_text).map_err(|e| {
             api(
                 ErrorCode::BadRequest,
@@ -146,6 +163,7 @@ impl Updates {
             key_id: v.key_id.clone(),
             trusted_comment: v.trusted_comment.clone(),
             uploaded_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            source: source.map(str::to_string),
         };
         let mut all = lock(&self.packages);
         if let Some(o) = all.iter().find(|o| {
@@ -276,10 +294,29 @@ impl Updates {
             )
         })?;
         let product = match &a {
-            LauncherAction::Update { product, .. } | LauncherAction::Rollback { product } => {
-                product
-            }
+            LauncherAction::Update { product, .. }
+            | LauncherAction::Rollback { product }
+            | LauncherAction::Install { product, .. } => product,
         };
+        if let LauncherAction::Install { .. } = &a {
+            // "Add app": a product the machine doesn't run yet. Its package comes from the
+            // channel, else the Launcher fetches it from GitHub (the API handler made sure one
+            // of them has it).
+            if k.report
+                .products
+                .iter()
+                .any(|p| &p.product == product && p.version.is_some())
+            {
+                return Err(api(
+                    ErrorCode::Conflict,
+                    format!("{} already has {product}", k.report.machine_name),
+                ));
+            }
+            if !k.pending.contains(&a) {
+                k.pending.push(a);
+            }
+            return Ok(self.entry(k, &packages));
+        }
         let p = k
             .report
             .products
@@ -307,6 +344,7 @@ impl Updates {
                     ));
                 }
             }
+            LauncherAction::Install { .. } => {}
             LauncherAction::Rollback { .. } => {
                 if p.previous.is_none() {
                     return Err(api(

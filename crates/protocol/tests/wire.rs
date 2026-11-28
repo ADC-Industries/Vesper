@@ -477,6 +477,8 @@ fn sample_state() -> ShowState {
             download_size: None,
             model: Some("base.en".into()),
             device: Some("CPU (6 threads)".into()),
+            gpu: Some(false),
+            note: Some("no GPU this server can use: captions run on the CPU".into()),
             load: Some(0.31),
             lines: vec![protocol::CaptionLineState {
                 line: 4,

@@ -23,8 +23,9 @@ when they are already there (`crates/pro-import/PROTO.md`).
 ## Vesper server for Linux (`.deb`)
 
 ```sh
-sudo apt install build-essential pkg-config clang dpkg-dev libasound2-dev \
-  libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev
+sudo apt install build-essential pkg-config clang cmake dpkg-dev libasound2-dev \
+  libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev \
+  libvulkan-dev glslc
 packaging/linux/build-deb.sh            # the schemas, cargo build --release, npm run build, the IDN Node, then the .debs
 packaging/linux/build-deb.sh --no-build # package what is already built
 packaging/linux/smoke-test.sh           # install them in throwaway containers (podman) and run them
@@ -65,7 +66,8 @@ packages, with minimum versions): FFmpeg's runtime libraries (`libavcodec`, `lib
 `libavutil`, `libswscale`, `libswresample`, from Ubuntu's archive, never bundled), ALSA
 (`libasound2t64`), libc and libgcc. Added by hand, because they are loaded at run time where
 `ldd` can't see them: `libvulkan1` and `mesa-vulkan-drivers` (wgpu; Mesa's lavapipe is the
-software fallback on a box without a GPU), `mesa-va-drivers` (VA-API decode on AMD),
+software fallback on a box without a GPU; since GPU captions the binary also links
+`libvulkan.so.1` itself, for whisper's Vulkan backend, so `dpkg-shlibdeps` finds `libvulkan1` too), `mesa-va-drivers` (VA-API decode on AMD),
 `avahi-daemon` (the box's `<host>.local` name; the server announces `_vesper._tcp` over mDNS
 itself), `fonts-dejavu-core` (slide text needs at least one system font), and `systemd` /
 `init-system-helpers` for the maintainer scripts. `Recommends`: `intel-media-va-driver` (VA-API
@@ -145,10 +147,20 @@ files (an ID there replaces a bundled one).
 
 ## Live captions: speech models
 
-Live captions (`docs/CAPTIONS-PLAN.md`) run whisper.cpp inside the server, **compiled in** (IDN's
-`idn-captions`, built from source by `whisper-rs-sys` with CMake: no DLL and no new package
-dependency on either platform; built without its GPU feature, so neither the Vulkan SDK nor
-`glslc` is needed to build it). The speech **models are not packaged**: they are 75 MB
+Live captions (`docs/CAPTIONS-PLAN.md`) run whisper.cpp in a worker process that is the server's
+own binary (`vesper --idn-captions-worker`), **compiled in** (IDN's `idn-captions`, built from
+source by `whisper-rs-sys` with CMake: no DLL). **GPU captions** (whisper on the GPU through
+Vulkan, IDN's `gpu` feature):
+- **Linux:** always built in (used only when Settings ▸ Captions ▸ Processor is GPU; the CPU is
+  the default). Building needs `libvulkan-dev` and `glslc` (ggml compiles its Vulkan
+  shaders at build time, into the binary); running needs only the Vulkan loader (`libvulkan1`) and
+  a Vulkan driver (`mesa-vulkan-drivers` for AMD and Intel, NVIDIA's own driver), which the
+  package already depends on for rendering. No new package dependency. A box without a Vulkan
+  GPU runs whisper on the CPU (the device IDN's worker chooses is shown in Settings ▸ Captions).
+- **Windows:** not built yet: the cross build would need the Vulkan SDK's headers and loader
+  import library for MinGW and `glslc` on the build machine (feature `gpu-captions` of
+  `vesper-server`); the Windows server runs whisper on the CPU, and Settings ▸ Captions says so
+  when GPU is chosen. The speech **models are not packaged**: they are 75 MB
 (`tiny.en`) to 1.6 GB (`large-v3-turbo`) and the right one depends on the box. The server fetches
 the one it needs the first time captions start, from whisper.cpp's own files on Hugging Face at a
 pinned commit, checked against its pinned size and SHA-256, into the data folder's
@@ -548,6 +560,56 @@ Windows checklist (Launcher):
    restarts on the new version (its window shows it); with a broken one, it goes back.
 7. Uninstall: the task, the tray's `Run` value, the firewall rule and the program folder are
    gone; `%ProgramData%\Vesper Launcher` stays.
+
+## Releases
+
+Releases live on GitHub (`github.com/ADC-Industries/Vesper`, its Releases page), one release line
+per product told apart by the tag's prefix:
+
+| Product | Tag | Assets (signed product, platform) |
+|---|---|---|
+| Vesper server | `server-v<version>` | `vesper_<version>-<rev>_amd64.deb` (`vesper`, `linux-x86_64`), `vesper-server-<version>-setup.exe` (`vesper`, `windows-x86_64`) |
+| Vesper Launcher | `launcher-v<version>` | `vesper-launcher_…deb` (`vesper-launcher`, `linux-x86_64`), `vesper-launcher-tray_…deb` (`vesper-launcher-tray`, `linux-x86_64`), `vesper-launcher-<version>-setup.exe` (`vesper-launcher`, `windows-x86_64`) |
+| Bundled IDN Node | `idn-node-v<version>` | `vesper-idn-node_<version>-<rev>_amd64.deb` (`vesper-idn-node`, `linux-x86_64`; on Windows the Node is in the Launcher's installer) |
+| Vesper Oriel | `oriel-v<version>` | `vesper-oriel_<version>_amd64.deb` (`vesper-oriel`, `linux-x86_64`), `…_amd64.AppImage` (`linux-x86_64-appimage`, to download by hand), `…_x64-setup.exe` (`windows-x86_64`) |
+
+A normal release is the **stable** channel, a GitHub pre-release the **beta** channel. Every asset
+has its minisign signature beside it (`<file>.minisig`), made with the **automation key**
+(A05D75D53CB6819A, public half `packaging/keys/vesper-automation.pub`, compiled into the
+Launcher's and the server's trusted keys) and the trusted comment the Launcher checks:
+`vesper-package product=<product> version=<version> platform=<platform>`. The IDN Node's version
+is its package's (`0.3.8~beta18`); its tag spells the `~` as `-` (`idn-node-v0.3.8-beta18`), which
+git allows. Each release also has `manifest.json`: the product, version and channel, and per
+asset its signed product, platform, file name, size and SHA-256.
+
+**Making a release** (on the build machine that holds the automation key):
+
+```sh
+scripts/release.sh server 0.2.0 --dry-run    # build, sign, write the manifest, print the gh command
+scripts/release.sh server 0.2.0              # the same, then publish (gh release create)
+scripts/release.sh oriel 0.2.0 --beta        # a beta: a GitHub pre-release
+scripts/release.sh idn-node 0.3.8-beta18 --no-build   # packages already in packaging/out/
+```
+
+The version must be what the product's sources say (`crates/vesper-server/Cargo.toml`,
+`crates/vesper-launcher/Cargo.toml`, `apps/control/src-tauri/tauri.conf.json`, the IDN tag in
+`crates/audio/Cargo.toml`): change it there first. The script builds with the scripts above
+(`--no-build` takes what is in `packaging/out/`, the newest revision of each `.deb`), signs each
+asset with `minisign -S -s ~/.config/vesper-release/vesper-automation.key` (another key with
+`VESPER_RELEASE_KEY`; only its path is passed to minisign, nothing reads, prints or copies it),
+checks every signature against the public key, writes the manifest, puts the release together in
+`packaging/out/release/<tag>/` and publishes it with `gh release create <tag> [--prerelease]`
+(another repository with `VESPER_RELEASE_REPO`). GitHub makes the tag on the repository's default
+branch: publish the code first. An existing tag is refused.
+
+**How releases reach the machines.** The church's Vesper server checks the repository every 6
+hours and brings the newest release of each product its machines run into the site's update
+channel, signature checked (Oriel ▸ Site ▸ Updates ▸ "Releases from GitHub": on/off, stable or
+beta, how often, the repository); installing stays an admin's action. A Launcher with no church
+server checks GitHub itself (`"github"` in `launcher.json`, `docs/LAUNCHER-PLAN.md`, "Releases
+from GitHub"). "Add app" (the Launcher's window, or Oriel's "Add app to <machine>…") installs a
+product a machine doesn't have yet from the channel or GitHub. A site without internet keeps
+uploading the release's files (the package and its `.minisig`) in Site ▸ Updates.
 
 ## Licences
 

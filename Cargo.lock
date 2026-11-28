@@ -6295,23 +6295,38 @@ dependencies = [
  "anyhow",
  "axum",
  "base64 0.22.1",
- "blake2 0.10.6",
  "chrono",
  "clap",
- "ed25519-dalek",
  "gethostname",
- "getrandom 0.4.3",
  "libc",
  "protocol",
  "serde",
  "serde_json",
- "sha2 0.11.1",
  "tempfile",
  "tokio",
  "tracing",
  "tracing-subscriber",
  "uuid",
+ "vesper-releases",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "vesper-releases"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "blake2 0.10.6",
+ "ed25519-dalek",
+ "getrandom 0.4.3",
+ "protocol",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "tracing",
+ "ureq",
+ "vesper-releases",
 ]
 
 [[package]]
@@ -6369,6 +6384,7 @@ dependencies = [
  "vesper-codex",
  "vesper-core",
  "vesper-launcher",
+ "vesper-releases",
  "vesper-scripture",
  "vesper-site",
  "vesper-translate",
@@ -6850,6 +6866,7 @@ version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2088172d00f936c348d6a72f488dc2660ab3f507263a195df308a3c2383229f6"
 dependencies = [
+ "libc",
  "whisper-rs-sys",
 ]
 

@@ -94,6 +94,8 @@ cp "$here/launcher.d/vesper.json" "$stage/launcher.d/"
 cp "$root/COPYRIGHT" "$stage/licenses/COPYRIGHT.txt"
 cp "$root/LICENSE-MIT" "$stage/licenses/LICENSE-MIT.txt"
 cp "$root/LICENSE-APACHE" "$stage/licenses/LICENSE-APACHE.txt"
+# The ProPresenter 7 schemas compiled into the importer: their source and MIT licence.
+cp "$root/crates/pro-import/PROTO.md" "$stage/licenses/PROPRESENTER-SCHEMAS.txt"
 cp "$ffmpeg/LICENSE.txt" "$stage/licenses/FFMPEG-LICENSE.txt"
 cp "$here/FFMPEG-NOTICE.txt" "$stage/licenses/FFMPEG-NOTICE.txt"
 {

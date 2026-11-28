@@ -8,7 +8,9 @@
   // (slideMenu.ts). The text uses the canvas's fixed style, not the presentation's font.
   // "Second language" (batch 16) shows each slide's second-language text beside its text
   // (edit/language.ts: one `setSlideTranslation` per change), with the language code and a
-  // "Paste two languages" dialog that fills both from pasted lyrics.
+  // "Paste two languages" dialog that fills both from pasted lyrics. Smart paste: SongSelect lyrics
+  // pasted into a slide (a `CCLI Song #` line, edit/songselect.ts) offer to become a new song with
+  // its metadata (the SongSelect dialog previews it first), or go in as plain text.
   import PageToolbar from "../../ui/PageToolbar.svelte";
   import Slider from "../../ui/Slider.svelte";
   import Check from "lucide-svelte/icons/check";
@@ -44,6 +46,7 @@
   import LockBanner from "../../components/LockBanner.svelte";
   import Lock from "lucide-svelte/icons/lock";
   import { copyTyping, presence } from "../../state/presence.svelte";
+  import { looksLikeSongSelect } from "../../edit/songselect";
   import { canContinueAbove, continueGroupOps, deleteSlideOps, removeCueOps, slideBadges, slideMenuEntries, type SlideMenuEntry } from "./slideMenu";
 
   let { conn }: { conn: Connection } = $props();
@@ -211,6 +214,35 @@
   });
 
   // ---- editing --------------------------------------------------------------------------------
+
+  // ---- smart paste (SongSelect lyrics) ------------------------------------------------------------
+
+  /** Pasted SongSelect lyrics held until the user picks: a new song, or plain text in the slide. */
+  let smartPaste = $state<{ text: string; slideId: string; start: number; end: number } | null>(null);
+
+  function onPaste(b: ReflowBlock, e: ClipboardEvent) {
+    const text = e.clipboardData?.getData("text/plain") ?? "";
+    if (lockedBy || !looksLikeSongSelect(text)) return;
+    e.preventDefault();
+    const el = e.currentTarget as HTMLTextAreaElement;
+    smartPaste = { text, slideId: b.slideId, start: el.selectionStart, end: el.selectionEnd };
+  }
+
+  function smartImport() {
+    const sp = smartPaste;
+    smartPaste = null;
+    if (sp) shell.songSelect = { text: sp.text };
+  }
+
+  function smartAsText() {
+    const sp = smartPaste;
+    smartPaste = null;
+    const el = sp && editorEl?.querySelector<HTMLTextAreaElement>(`[data-reflow-text="${sp.slideId}"]`);
+    if (!sp || !el) return;
+    el.focus();
+    el.setRangeText(sp.text, sp.start, sp.end, "end");
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 
   function onInput(b: ReflowBlock, e: Event) {
     const el = e.currentTarget as HTMLTextAreaElement;
@@ -607,6 +639,15 @@
   {#if pres}
     <TranslateBanner preview={mt} locked={!!lockedBy} onkeep={keepTranslation} />
   {/if}
+  {#if pres && smartPaste}
+    <div class="smartpaste" role="status" data-testid="reflow-songselect">
+      <ClipboardPaste size={16} strokeWidth={1.8} aria-hidden="true" />
+      <span class="sptext">This looks like a song from SongSelect. Make it a new song with its title, sections, writers and CCLI number?</span>
+      <button type="button" class="tbtn" onclick={smartImport} data-testid="reflow-songselect-import">Import as New Song…</button>
+      <button type="button" class="tbtn" onclick={smartAsText}>Paste as Text</button>
+      <button type="button" class="tbtn" onclick={() => (smartPaste = null)}>Cancel</button>
+    </div>
+  {/if}
 
   {#if !pres}
     <div class="empty">
@@ -652,6 +693,7 @@
                       data-reflow-text={b.slideId}
                       aria-label={`Slide ${b.index + 1} text${b.sectionName ? `, ${b.sectionName}` : ""}`}
                       oninput={(e) => onInput(b, e)}
+                      onpaste={(e) => onPaste(b, e)}
                       onkeydown={(e) => onKey(b, e)}
                       onkeyup={(e) => track(b, e)}
                       onclick={(e) => track(b, e)}
@@ -810,6 +852,19 @@
 </section>
 
 <style>
+  .smartpaste {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface-panel));
+    font-size: 13px;
+  }
+  .sptext {
+    flex: 1 1 320px;
+  }
   /* Someone else is editing (G8): the text is read-only. */
   .editor.ro textarea {
     opacity: 0.72;

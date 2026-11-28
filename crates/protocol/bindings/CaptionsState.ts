@@ -35,9 +35,18 @@ downloadSize: number | null,
  */
 model: string | null, 
 /**
- * What whisper runs on ("CPU (14 threads)").
+ * What whisper runs on: the GPU's name, or "CPU (8 threads)".
  */
 device: string | null, 
+/**
+ * `device` is a GPU (while running; servers before GPU captions leave it out).
+ */
+gpu: boolean | null, 
+/**
+ * Why whisper isn't on the processor chosen (`CaptionsConfig.processor`): no GPU, or the
+ * GPU failed and captions run on the CPU instead.
+ */
+note: string | null, 
 /**
  * Work per second of sound (below 1: it keeps up), rounded to hundredths.
  */

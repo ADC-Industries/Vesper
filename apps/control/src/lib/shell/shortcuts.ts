@@ -24,7 +24,8 @@ export type AppActionId =
   | "undo"
   | "redo"
   | "settings"
-  | "importChordPro";
+  | "importChordPro"
+  | "importSongSelect";
 
 /** A key combination matched by physical key (`KeyboardEvent.code`); `Ctrl` also means ⌘. */
 export interface Binding {

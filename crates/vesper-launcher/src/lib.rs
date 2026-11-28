@@ -19,6 +19,7 @@
 //! - [`roles`]: acting on the machine's roles (the Vesper server, a display box's IDN Node).
 //! - [`idn_node`]: the bundled IDN Node stays Vesper's to update (its marker, the service guard).
 //! - [`diagnostics`]: the bundled `idn doctor` in plain language, and a report for support.
+//! - [`github`]: Vesper's releases on GitHub when there is no church server; "Add app".
 //! - [`selfupdate`]: the Launcher's own update, through a helper that outlives its restart.
 //! - [`http`]: a minimal HTTP/1.0 client for the LAN.
 //! - [`cli`]: `vesper-launcher join` (a headless join from the command line).
@@ -30,16 +31,18 @@ pub mod channel;
 pub mod cli;
 pub mod config;
 pub mod diagnostics;
+pub mod github;
 pub mod health;
 pub mod http;
 pub mod idn_node;
 pub mod install;
 pub mod launcher;
-pub mod package;
 pub mod roles;
 pub mod selfupdate;
 pub mod setup;
-pub mod sign;
+
+/// Package signatures and what a package is (from `vesper-releases`, shared with the server).
+pub use vesper_releases::{package, sign};
 
 pub use config::Config;
 pub use launcher::Launcher;

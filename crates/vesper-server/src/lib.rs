@@ -109,6 +109,7 @@ pub mod outputs;
 pub mod playback;
 pub mod presence;
 pub mod preview;
+pub mod releases;
 pub mod remote_compat;
 pub mod show;
 pub mod showdocs;
@@ -189,6 +190,11 @@ pub struct ServerConfig {
     /// More update signing keys (minisign public key text) for the site's update channel,
     /// besides the compiled-in release keys (see [`updates`]).
     pub update_keys: Vec<String>,
+    /// GitHub's API, where the server checks Vesper's releases for the site's update channel
+    /// (see [`releases`]; `None`: never, as in tests; the `vesper` binary passes GitHub's).
+    pub github_api: Option<String>,
+    /// How often the release checker looks whether a check is due (60 s; tests shorten it).
+    pub github_tick: std::time::Duration,
     /// How often the site's display boxes are read (see [`mosaic`]; 5 s).
     pub mosaic_poll: std::time::Duration,
     /// The IDN Nodes Mosaic works with (`None`: the Site Manager's only, never this machine's
@@ -226,6 +232,8 @@ impl ServerConfig {
             displays: None,
             ws_ping: std::time::Duration::from_secs(20),
             update_keys: Vec::new(),
+            github_api: None,
+            github_tick: std::time::Duration::from_secs(60),
             mosaic_poll: mosaic::DEFAULT_POLL,
             mosaic_nodes: None,
             mosaic_logo_settle: mosaic::LOGO_SETTLE,
@@ -398,6 +406,8 @@ pub struct Shared {
     pub ccli: ccli::CcliLog,
     /// The site's update channel and its Launchers (see [`updates`]).
     pub updates: updates::Updates,
+    /// Vesper's releases on GitHub, brought into the update channel (see [`releases`]).
+    pub releases: Arc<releases::Releases>,
     /// The site's display boxes and channels (see [`mosaic`]): on the site's server.
     pub mosaic: mosaic::Mosaic,
     /// The site's signage channels (see [`signage`]): rendered on the site's server.
@@ -1004,6 +1014,7 @@ pub fn vulkan_encode_off() {
 /// binary does): it isn't safe to set here.
 pub async fn start(config: ServerConfig) -> anyhow::Result<RunningServer> {
     let t0 = Instant::now();
+    let config_github_tick = config.github_tick;
     // An empty data folder (a fresh install) becomes a data directory; a missing one is
     // refused (a mistyped --data path).
     anyhow::ensure!(
@@ -1098,6 +1109,10 @@ pub async fn start(config: ServerConfig) -> anyhow::Result<RunningServer> {
         started: Instant::now(),
         presence: presence::Presence::new(events.clone()),
         updates: updates::Updates::open(&config.data_dir, &config.update_keys)?,
+        releases: Arc::new(releases::Releases::open(
+            &config.data_dir,
+            config.github_api.clone(),
+        )),
         mosaic: {
             let mut m = mosaic::Mosaic::load(
                 &config.data_dir,
@@ -1451,6 +1466,17 @@ pub async fn start(config: ServerConfig) -> anyhow::Result<RunningServer> {
             }
             sh.codex_writer.refresh_marks(&sh.codex_server()).await;
         }
+    });
+
+    // Vesper's releases on GitHub, into the site's update channel (when a check is due).
+    let sh = shared.clone();
+    let stop_releases = stx.subscribe();
+    let tick = config_github_tick;
+    tokio::spawn(async move {
+        sh.releases
+            .clone()
+            .run(sh.clone(), tick, stop_releases)
+            .await
     });
 
     // Rotate the pairing code on schedule so the log always shows a valid one.

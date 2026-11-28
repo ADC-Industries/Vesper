@@ -4,6 +4,12 @@
 //! - **Directives** `{name: value}` / `{name}` (case-insensitive, short forms too): `title` /
 //!   `t`, `subtitle` / `st`, `artist`, `composer`, `lyricist`, `copyright`, `year`, `album`,
 //!   `key`, `capo`, `tempo`, `ccli`, and `meta: <name> <value>` for the same names.
+//!   SongSelect's files (`crate::songselect`): `author` / `authors` / `writer` (`|`-separated
+//!   names), `ccli_license` (the church's licence, [`ChordProSong::license`]), a `copyright`
+//!   that starts with `©` or a year (the year is taken out), and SongSelect's footer as
+//!   comments or plain lines (`CCLI Song # …`, `© …`, the terms line, `CCLI License # …`, the
+//!   authors line next to the song number): metadata, not lyrics. Unknown directives are
+//!   skipped.
 //! - **Sections**: `start_of_verse` / `sov`, `start_of_chorus` / `soc`, `start_of_bridge` /
 //!   `sob`, `start_of_part` and any other `start_of_<kind>` (with an optional label: `{sov:
 //!   Verse 2}`), ended by the matching `end_of_…` (or the next section). `{chorus}` plays the last
@@ -46,6 +52,7 @@
 //! file reads back the same way.
 
 use crate::chords::{Chord, ChordMark};
+use crate::songselect;
 use crate::text::{Paragraph, TextRun};
 use crate::{Presentation, SongInfo};
 use serde::{Deserialize, Serialize};
@@ -120,6 +127,9 @@ pub struct ChordProSong {
     pub tempo: Option<String>,
     /// `{ccli}`.
     pub ccli: Option<String>,
+    /// The church's CCLI licence number a SongSelect file carries (`{ccli_license}`, the
+    /// footer's `CCLI License # …`): not song metadata (the licence comes from the settings).
+    pub license: Option<String>,
     /// Sections in document order.
     pub sections: Vec<ChordProSection>,
     /// Play order (indexes into `sections`, repeats from `{chorus}`).
@@ -164,6 +174,9 @@ impl ChordProSong {
             copyright_year: self.year,
             album: self.album.clone(),
             original_key: self.key.clone(),
+            // A licensed song (it has a CCLI number) shows its copyright line, subject to the
+            // show's CCLI settings.
+            display: self.ccli.is_some(),
             ..SongInfo::default()
         };
         (info != SongInfo::default()).then_some(info)
@@ -349,7 +362,7 @@ pub fn parse_inline(line: &str) -> Paragraph {
     p
 }
 
-fn paragraph(text: &str) -> Paragraph {
+pub(crate) fn paragraph(text: &str) -> Paragraph {
     Paragraph {
         runs: if text.is_empty() {
             Vec::new()
@@ -510,6 +523,10 @@ pub fn parse(text: &str) -> ChordProSong {
     };
     let mut skipping: Option<&'static str> = None;
     let mut pending_chords: Option<Vec<(u32, String)>> = None;
+    // SongSelect's footer: the comment just before (an authors line before the song number),
+    // and whether the last footer line was the song number (an authors line after it).
+    let mut last_comment: Option<String> = None;
+    let mut after_number = false;
     let some = |v: &str| Some(v.trim().to_string()).filter(|v| !v.is_empty());
     let lines: Vec<&str> = text.lines().collect();
     for raw in lines {
@@ -527,6 +544,7 @@ pub fn parse(text: &str) -> ChordProSong {
             if let Some(c) = pending_chords.take() {
                 b.stanza.push(chords_only(&c));
             }
+            let prev_comment = last_comment.take();
             let (name, value) = if name == "meta" {
                 let v = value.trim();
                 match v.find(char::is_whitespace) {
@@ -549,7 +567,30 @@ pub fn parse(text: &str) -> ChordProSong {
                         });
                     }
                 }
-                "copyright" => b.song.copyright = some(&value),
+                "copyright" => {
+                    if let Some(v) = some(&value) {
+                        let c = songselect::copyright(&v);
+                        let marked = v.starts_with('©') || c.year.is_some();
+                        if marked {
+                            b.song.copyright = c.owners;
+                            b.song.year = b.song.year.or(c.year);
+                        } else {
+                            b.song.copyright = Some(v);
+                        }
+                    }
+                }
+                "author" | "authors" | "writer" | "writers" => {
+                    if let Some(v) = songselect::authors(&value) {
+                        b.song.authors = Some(match b.song.authors.take() {
+                            Some(a) if !a.contains(&v) => format!("{a}, {v}"),
+                            Some(a) => a,
+                            None => v,
+                        });
+                    }
+                }
+                "ccli_license" | "ccli_licence" | "license" | "licence" => {
+                    b.song.license = some(&value)
+                }
                 "year" => b.song.year = value.trim().parse().ok(),
                 "album" => b.song.album = some(&value),
                 "key" => b.song.key = some(&value),
@@ -572,6 +613,20 @@ pub fn parse(text: &str) -> ChordProSong {
                 "comment" | "c" | "comment_italic" | "ci" | "comment_box" | "cb" | "highlight" => {
                     if let Some((kind, name)) = heading(&value) {
                         b.open(&kind, Some(name));
+                    } else if let Some(f) = songselect::footer_line(&value) {
+                        if matches!(f, songselect::FooterLine::SongNumber(_)) {
+                            if b.song.authors.is_none()
+                                && let Some(a) = prev_comment
+                            {
+                                b.song.authors = songselect::authors(&a);
+                            }
+                            after_number = true;
+                        } else {
+                            after_number = false;
+                        }
+                        songselect::apply_footer(&mut b.song, &f);
+                    } else if std::mem::take(&mut after_number) && b.song.authors.is_none() {
+                        b.song.authors = songselect::authors(&value);
                     } else if matches!(name.as_str(), "comment_italic" | "ci")
                         && !b.stanza.is_empty()
                         && let Some(v) = some(&value)
@@ -579,6 +634,8 @@ pub fn parse(text: &str) -> ChordProSong {
                         // Only italic comments are a second language; other comments
                         // (performance notes like "repeat 2x") are skipped.
                         b.notes.push(v);
+                    } else {
+                        last_comment = some(&value);
                     }
                 }
                 n if n.starts_with("end_of_") || n.starts_with("eo") && n.len() == 3 => {
@@ -608,6 +665,35 @@ pub fn parse(text: &str) -> ChordProSong {
                 b.stanza.push(chords_only(&c));
             }
             b.end_stanza();
+            after_number = false;
+            continue;
+        }
+        // SongSelect's footer as plain lines.
+        if !line.contains('[')
+            && let Some(f) = songselect::footer_line(line)
+        {
+            if let Some(c) = pending_chords.take() {
+                b.stanza.push(chords_only(&c));
+            }
+            after_number = matches!(f, songselect::FooterLine::SongNumber(_));
+            // The authors line right before the number, alone in its stanza.
+            if after_number
+                && b.song.authors.is_none()
+                && b.stanza.len() == 1
+                && b.stanza[0].chords.is_empty()
+                && let Some(a) = b.stanza.pop()
+            {
+                b.song.authors = songselect::authors(&a.plain_text());
+            }
+            songselect::apply_footer(&mut b.song, &f);
+            continue;
+        }
+        // The authors line right after the number (a footer line, even when `{author}` already
+        // named them).
+        if std::mem::take(&mut after_number) && b.stanza.is_empty() && !line.contains('[') {
+            if b.song.authors.is_none() {
+                b.song.authors = songselect::authors(line);
+            }
             continue;
         }
         if let Some(c) = pending_chords.take() {
@@ -993,6 +1079,81 @@ mod tests {
         assert_eq!(slides[0].len(), 1);
         assert_eq!(slides[2].len(), 2);
         assert_eq!(s.slides(1)[0].len(), 2);
+    }
+
+    #[test]
+    fn songselect_metadata_and_footer() {
+        // Made up: directives, then the footer as comments (authors before the number).
+        let text = "\
+{title: Paper Lanterns}
+{key: A}
+{tempo: 72}
+{time: 4/4}
+{ccli_license: 7654321}
+{unknown_directive: ignored}
+
+{comment: Verse 1}
+[A]Paper lanterns [E]drifting high
+
+{comment: Chorus}
+[D]Glow, [A]glow
+
+{comment: Alex Example | Jamie Sample}
+{comment: CCLI Song # 1234567}
+{comment: © 2019 Example Songs | Sample Music}
+{comment: For use solely with the SongSelect® Terms of Use. All rights reserved.}
+";
+        let s = parse(text);
+        assert_eq!(
+            s.sections
+                .iter()
+                .map(|x| x.name.as_str())
+                .collect::<Vec<_>>(),
+            ["Verse 1", "Chorus"]
+        );
+        assert_eq!(s.key.as_deref(), Some("A"));
+        assert_eq!(s.tempo.as_deref(), Some("72"));
+        assert_eq!(s.ccli.as_deref(), Some("1234567"));
+        assert_eq!(s.license.as_deref(), Some("7654321"));
+        assert_eq!(s.authors.as_deref(), Some("Alex Example, Jamie Sample"));
+        assert_eq!(s.year, Some(2019));
+        assert_eq!(s.copyright.as_deref(), Some("Example Songs; Sample Music"));
+        assert!(s.song_info().unwrap().display);
+        // The footer as plain lines, old order (authors after the number), and directives.
+        let text = "\
+{title: Paper Lanterns}
+{author: Riley Placeholder|Casey Invented}
+{copyright: 2004 Imaginary Hymns}
+
+[A]Paper lanterns [E]drifting high
+
+CCLI Song # 7000001
+Someone Else
+CCLI License # 1112223
+";
+        let s = parse(text);
+        assert_eq!(s.sections.len(), 1);
+        assert_eq!(s.sections[0].stanzas.len(), 1);
+        assert_eq!(
+            s.authors.as_deref(),
+            Some("Riley Placeholder, Casey Invented")
+        );
+        assert_eq!(s.ccli.as_deref(), Some("7000001"));
+        assert_eq!(s.license.as_deref(), Some("1112223"));
+        assert_eq!(
+            (s.year, s.copyright.as_deref()),
+            (Some(2004), Some("Imaginary Hymns"))
+        );
+        // Plain lines, new order: the authors line alone before the number.
+        let s = parse("[A]Words\n\nAlex Example | Jamie Sample\nCCLI Song # 1234567\n");
+        assert_eq!(s.authors.as_deref(), Some("Alex Example, Jamie Sample"));
+        assert_eq!(s.sections.len(), 1);
+        // A copyright without a mark stays verbatim (Vesper's own export round trip).
+        let s = parse("{copyright: Example Music | Other}\n{year: 2001}\nWords");
+        assert_eq!(
+            (s.year, s.copyright.as_deref()),
+            (Some(2001), Some("Example Music | Other"))
+        );
     }
 
     #[test]

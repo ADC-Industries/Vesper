@@ -25,6 +25,7 @@
   import PromptDialog from "../components/PromptDialog.svelte";
   import MessageDialog from "../pages/show/MessageDialog.svelte";
   import ChordProDialog from "../components/ChordProDialog.svelte";
+  import SongSelectDialog from "../components/SongSelectDialog.svelte";
   import ShowPage from "../pages/show/ShowPage.svelte";
   // The slide editor (canvas, inspector panels, transitions) loads on first use too; the
   // Library's song editing shares its chunk.
@@ -129,6 +130,7 @@
   {#if sitePage.ask}<UnlockDialog ask={sitePage.ask} />{/if}
   {#if shell.messageEditor}{#key shell.messageEditor}<MessageDialog />{/key}{/if}
   {#if shell.chordPro}{#key shell.chordPro}<ChordProDialog />{/key}{/if}
+  {#if shell.songSelect}{#key shell.songSelect}<SongSelectDialog />{/key}{/if}
   {#if shell.prompt}{#key shell.prompt}<PromptDialog />{/key}{/if}
   {#if shell.contextMenu}{#key shell.contextMenu}<ContextMenu x={shell.contextMenu.x} y={shell.contextMenu.y} items={shell.contextMenu.items} />{/key}{/if}
 </div>

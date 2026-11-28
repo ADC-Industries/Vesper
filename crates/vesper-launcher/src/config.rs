@@ -68,6 +68,10 @@ pub struct Config {
     /// IDN Node and tools). The defaults are the system's; other values are for tests.
     #[serde(default)]
     pub system: SystemConfig,
+    /// Checking Vesper's releases on GitHub when there is no church server, and for "Add app"
+    /// ([`crate::github`]).
+    #[serde(default)]
+    pub github: crate::github::GithubConfig,
     /// The file it was read from ([`Config::load`]): the self-update's helper reads it too.
     #[serde(skip)]
     pub path: Option<PathBuf>,
@@ -217,7 +221,7 @@ pub struct ChannelConfig {
 }
 
 /// A product the Launcher manages.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ProductConfig {
     /// Its ID: the `product=` of its packages.
@@ -234,7 +238,7 @@ pub struct ProductConfig {
     #[serde(default)]
     pub health_url: String,
     /// A log file to show (default: the unit's journal, or the supervised process's log).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub log_file: Option<PathBuf>,
     /// This is the Launcher itself (its own package, `vesper-launcher`): an update goes
     /// through [`crate::selfupdate`], a helper that outlives the Launcher's restart.
@@ -243,7 +247,7 @@ pub struct ProductConfig {
 }
 
 /// How a product's packages are installed.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, serde::Serialize)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",

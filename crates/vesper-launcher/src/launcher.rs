@@ -24,6 +24,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+/// Products added on this machine ("Add app"), in the state folder.
+pub const ADDED_FILE: &str = "added-products.json";
+
 /// The signature file next to a stored package.
 pub const SIGNATURE_FILE: &str = "package.minisig";
 
@@ -106,6 +109,9 @@ struct Runtime {
 /// A machine's Launcher.
 pub struct Launcher {
     cfg: Config,
+    /// Products added on this machine ("Add app", `added-products.json`), besides the
+    /// configured ones.
+    added: Mutex<Vec<ProductConfig>>,
     keys: Vec<PublicKey>,
     machine_id: String,
     platform: String,
@@ -124,6 +130,12 @@ pub struct Launcher {
     available: Mutex<BTreeMap<String, String>>,
     /// The last report to the channel: when, and what went wrong.
     last_report: Mutex<Option<(String, Option<String>)>>,
+    /// When a report last reached the site's server.
+    report_ok: Mutex<Option<Instant>>,
+    /// When the Launcher started.
+    started: Instant,
+    /// Vesper's releases on GitHub ([`crate::github`]).
+    pub(crate) direct: crate::github::Direct,
     /// `roles.json`: the roles made true on the machine ([`crate::roles`]).
     pub(crate) roles_file: Mutex<crate::roles::RolesFile>,
     /// One run of the roles at a time.
@@ -200,6 +212,9 @@ pub struct Overview {
     pub channel: ChannelView,
     /// The first-run setup.
     pub setup: SetupView,
+    /// Vesper's releases on GitHub: whether the Launcher checks them itself now (no church
+    /// server), and what it found.
+    pub github: crate::github::GithubView,
     /// The tray icon's colour: `ok`, `updating` (an update, a rollback or a start under way)
     /// or `attention` (a product failed, the channel can't be reached, the join failed, setting
     /// up the machine's roles failed).
@@ -263,9 +278,16 @@ impl Launcher {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Manifest::default(),
             Err(e) => return Err(e.into()),
         };
+        let added: Vec<ProductConfig> =
+            crate::setup::read::<Vec<ProductConfig>>(&cfg.state_dir.join(ADDED_FILE))?
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|a| !cfg.products.iter().any(|p| p.product == a.product))
+                .collect();
         let runtimes = cfg
             .products
             .iter()
+            .chain(&added)
             .map(|p| {
                 (
                     p.product.clone(),
@@ -286,6 +308,7 @@ impl Launcher {
         let roles_file = crate::setup::read(&cfg.state_dir.join("roles.json"))?.unwrap_or_default();
         let l = Arc::new(Launcher {
             cfg,
+            added: Mutex::new(added),
             keys,
             machine_id,
             platform,
@@ -297,12 +320,15 @@ impl Launcher {
             joining: Mutex::new(JoinState::NotJoined { problem: None }),
             available: Mutex::new(BTreeMap::new()),
             last_report: Mutex::new(None),
+            report_ok: Mutex::new(None),
+            started: Instant::now(),
+            direct: crate::github::Direct::default(),
             roles_file: Mutex::new(roles_file),
             roles_busy: tokio::sync::Mutex::new(()),
             roles_retry: Mutex::new(None),
             idn_guard: Mutex::new(IdnGuard::default()),
         });
-        for p in &l.cfg.products {
+        for p in &l.products() {
             if matches!(p.install, InstallKind::Deb { .. })
                 && let Some(v) = install::deb_installed_version(&l.cfg.dpkg, &p.product)
             {
@@ -363,8 +389,7 @@ impl Launcher {
         chosen.unwrap_or_else(|| {
             if self.cfg.roles.is_empty()
                 && self
-                    .cfg
-                    .products
+                    .products()
                     .iter()
                     .any(|p| p.product == protocol::PRODUCT_ID)
             {
@@ -632,10 +657,23 @@ impl Launcher {
 
     /// Notes a report to the channel (its error, if any) and the newer versions it has.
     pub fn reported(&self, problem: Option<String>, available: Option<BTreeMap<String, String>>) {
+        if problem.is_none() {
+            *lock(&self.report_ok) = Some(Instant::now());
+        }
         *lock(&self.last_report) = Some((now(), problem));
         if let Some(a) = available {
             *lock(&self.available) = a;
         }
+    }
+
+    /// When a report last reached the site's server.
+    pub fn last_report_ok(&self) -> Option<Instant> {
+        *lock(&self.report_ok)
+    }
+
+    /// When the Launcher started.
+    pub fn started(&self) -> Instant {
+        self.started
     }
 
     /// Of the channel's packages, the newest version for this machine of each product newer
@@ -686,14 +724,25 @@ impl Launcher {
         // Only versions newer than the installed one (an update made here since the last
         // report installed it).
         let mut available = lock(&self.available).clone();
+        let direct = self.github_direct();
+        if direct {
+            // GitHub's, where newer than the channel's.
+            for (p, v) in self.direct.available() {
+                let newer = available
+                    .get(&p)
+                    .is_none_or(|have| package::compare_versions(&v, have).is_gt());
+                if newer {
+                    available.insert(p, v);
+                }
+            }
+        }
         available.retain(|product, v| {
             self.installed(product)
                 .version
                 .is_none_or(|cur| package::compare_versions(v, &cur).is_gt())
         });
         let kinds = self
-            .cfg
-            .products
+            .products()
             .iter()
             .map(|p| {
                 let kind = match p.install {
@@ -714,13 +763,14 @@ impl Launcher {
             kinds,
             channel,
             setup,
+            github: self.direct.view(&self.cfg.github, direct),
         }
     }
 
     /// Starts `product` (Launch in the tray): its system service or scheduled task, or the
     /// installed folder's executable.
     pub async fn start_product(&self, product: &str) -> Result<(), LauncherError> {
-        let p = self.product(product)?.clone();
+        let p = self.product(product)?;
         if p.is_self {
             return Err(LauncherError::Invalid("the Launcher is running".into()));
         }
@@ -760,7 +810,7 @@ impl Launcher {
 
     /// Stops `product` (Stop in the tray); it shows `Stopped` until started again.
     pub async fn stop_product(&self, product: &str) -> Result<(), LauncherError> {
-        let p = self.product(product)?.clone();
+        let p = self.product(product)?;
         if p.is_self {
             return Err(LauncherError::Invalid(
                 "the Launcher doesn't stop itself from here (systemctl stop vesper-launcher, or its scheduled task)".into(),
@@ -814,12 +864,64 @@ impl Launcher {
         &self.platform
     }
 
-    pub(crate) fn product(&self, product: &str) -> Result<&ProductConfig, LauncherError> {
-        self.cfg
-            .products
-            .iter()
+    pub(crate) fn product(&self, product: &str) -> Result<ProductConfig, LauncherError> {
+        self.products()
+            .into_iter()
             .find(|p| p.product == product)
             .ok_or_else(|| LauncherError::UnknownProduct(product.to_string()))
+    }
+
+    /// The products this machine manages: the configured ones, then those added here ("Add
+    /// app").
+    pub fn products(&self) -> Vec<ProductConfig> {
+        let mut v = self.cfg.products.clone();
+        v.extend(lock(&self.added).iter().cloned());
+        v
+    }
+
+    /// Manages `p` from now on (added with "Add app"; kept in `added-products.json`).
+    pub fn add_product(&self, p: ProductConfig) -> Result<(), LauncherError> {
+        if self.product(&p.product).is_ok() {
+            return Ok(());
+        }
+        let mut added = lock(&self.added);
+        let mut next = added.clone();
+        next.push(p.clone());
+        crate::setup::write(&self.cfg.state_dir.join(ADDED_FILE), &next, false).map_err(io)?;
+        *added = next;
+        lock(&self.runtimes).insert(
+            p.product.clone(),
+            Runtime {
+                state: ProductState::Stopped,
+                held: false,
+                restarts: Arc::new(AtomicU32::new(0)),
+                supervisor: None,
+                down_since: None,
+            },
+        );
+        Ok(())
+    }
+
+    /// Forgets a product added here whose first install failed (nothing of it is installed).
+    pub fn forget_added(&self, product: &str) {
+        if self.installed(product).version.is_some() {
+            return;
+        }
+        let mut added = lock(&self.added);
+        if !added.iter().any(|p| p.product == product) {
+            return;
+        }
+        let next: Vec<ProductConfig> = added
+            .iter()
+            .filter(|p| p.product != product)
+            .cloned()
+            .collect();
+        if let Err(e) = crate::setup::write(&self.cfg.state_dir.join(ADDED_FILE), &next, false) {
+            tracing::warn!("can't save {ADDED_FILE}: {e}");
+            return;
+        }
+        *added = next;
+        lock(&self.runtimes).remove(product);
     }
 
     /// What the manifest says about `product`.
@@ -1005,7 +1107,7 @@ impl Launcher {
         product: &str,
         version: &str,
     ) -> Result<UpdateOutcome, LauncherError> {
-        let p = self.product(product)?.clone();
+        let p = self.product(product)?;
         let _busy = self.busy.lock().await;
         if p.is_self && self.installed(product).in_progress.is_some() {
             return Err(LauncherError::Invalid(
@@ -1111,7 +1213,7 @@ impl Launcher {
     /// Refuses `version` of `product` as an update when it isn't newer than the installed one
     /// (the same version, or an older one: Roll back goes back to the previous version).
     pub fn newer_than_installed(&self, product: &str, version: &str) -> Result<(), LauncherError> {
-        let name = &self.product(product)?.name;
+        let name = self.product(product)?.name;
         let Some(cur) = self.installed(product).version else {
             return Ok(());
         };
@@ -1266,7 +1368,7 @@ impl Launcher {
     /// it finished.
     async fn finish_interrupted(&self) -> Vec<String> {
         let mut done = Vec::new();
-        for p in self.cfg.products.clone() {
+        for p in self.products() {
             if self.installed(&p.product).in_progress.is_none() {
                 continue;
             }
@@ -1458,7 +1560,7 @@ impl Launcher {
 
     /// Goes back to the kept previous version of `product`.
     pub async fn rollback(&self, product: &str) -> Result<UpdateOutcome, LauncherError> {
-        let p = self.product(product)?.clone();
+        let p = self.product(product)?;
         let _busy = self.busy.lock().await;
         let before = self.installed(product);
         let (Some(cur), Some(prev)) = (before.version.clone(), before.previous.clone()) else {
@@ -1547,7 +1649,7 @@ impl Launcher {
     /// folder-kind products.
     pub async fn start_products(&self) {
         let finished = self.finish_interrupted().await;
-        for p in self.cfg.products.clone() {
+        for p in self.products() {
             if !matches!(p.install, InstallKind::Dir { .. }) || finished.contains(&p.product) {
                 continue;
             }
@@ -1572,7 +1674,7 @@ impl Launcher {
 
     /// Stops the processes the Launcher runs.
     pub async fn shutdown(&self) {
-        for p in &self.cfg.products {
+        for p in &self.products() {
             self.stop_supervisor(&p.product).await;
         }
     }
@@ -1580,7 +1682,7 @@ impl Launcher {
     /// Health-checks every product not being updated.
     pub async fn check(&self) {
         let busy = self.busy.try_lock().is_err();
-        for p in &self.cfg.products {
+        for p in &self.products() {
             let state = lock(&self.runtimes).get(&p.product).map(|r| r.state);
             if busy
                 && matches!(
@@ -1682,7 +1784,7 @@ impl Launcher {
 
     /// The last `lines` lines of `product`'s log.
     pub async fn logs(&self, product: &str, lines: usize) -> Result<String, LauncherError> {
-        let p = self.product(product)?.clone();
+        let p = self.product(product)?;
         let path = self.log_path(&p);
         tokio::task::spawn_blocking(move || match (&p.install, &p.log_file) {
             (InstallKind::Deb { units }, None) if !units.is_empty() => {
@@ -1713,8 +1815,7 @@ impl Launcher {
     pub fn report(&self) -> LauncherReport {
         let rt = lock(&self.runtimes);
         let products = self
-            .cfg
-            .products
+            .products()
             .iter()
             .map(|p| {
                 let i = self.installed(&p.product);

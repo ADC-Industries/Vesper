@@ -24,7 +24,8 @@
 //! | `DELETE /launcher/v1/setup/join` | take a waiting join back, or leave the site here (forget the key) → `SetupView` |
 //! | `POST /launcher/v1/products/{product}/start`, `…/stop` | Launch, Stop (body `{}`) → `204` |
 //! | `GET  /launcher/v1/status` | `LauncherReport`: products, versions, states, health |
-//! | `POST /launcher/v1/actions` | `LauncherAction` (update: from the store, else downloaded from the site's channel; rollback) → `UpdateOutcome` |
+//! | `POST /launcher/v1/actions` | `LauncherAction` (update: from the store, else downloaded from the site's channel, else from GitHub; rollback; install: "Add app") → `UpdateOutcome` |
+//! | `GET  /launcher/v1/catalogue` | `Catalogue`: the products this machine can add, from the site's channel and GitHub |
 //! | `POST /launcher/v1/packages?file=NAME` | a package as the body, its `.minisig` base64 in `X-Vesper-Signature` → stored after verification: `{product, version, platform, keyId}` |
 //! | `GET  /launcher/v1/products/{product}/logs?lines=200` | its log, as text |
 //! | `GET  /launcher/v1/diagnostics` | `Diagnostics`: `idn doctor` run and explained, the Launcher's status, a report to copy (keys and tokens redacted) |
@@ -65,6 +66,7 @@ pub fn router(l: Arc<Launcher>) -> Router {
         .route("/launcher/v1/products/{product}/stop", post(stop))
         .route("/launcher/v1/status", get(status))
         .route("/launcher/v1/actions", post(action))
+        .route("/launcher/v1/catalogue", get(catalogue))
         .route(
             "/launcher/v1/packages",
             post(upload).layer(axum::extract::DefaultBodyLimit::max(MAX_PACKAGE)),
@@ -375,6 +377,14 @@ async fn upload(
             "internal",
             &e.to_string(),
         ),
+    }
+}
+
+async fn catalogue(State(l): State<Arc<Launcher>>) -> Response {
+    match tokio::task::spawn_blocking(move || l.catalogue()).await {
+        Ok(Ok(products)) => axum::Json(protocol::Catalogue { products }).into_response(),
+        Ok(Err(e)) => launcher_error(e),
+        Err(e) => launcher_error(LauncherError::Io(e.to_string())),
     }
 }
 

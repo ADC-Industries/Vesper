@@ -147,7 +147,7 @@ export function orielMenu(c: OrielMenuContext): MenuDef[] {
         later("media-files", "Media Files…"),
         later("codex-import", "Codex Export File…"),
         sep,
-        later("songselect", "Song from SongSelect…"),
+        app("songselect", "Song from SongSelect…", "importSongSelect", { title: "Songs downloaded from CCLI SongSelect (lyrics .txt, ChordPro, .usr) or pasted SongSelect lyrics" }),
         later("word", "Lyrics from Word…"),
         item("pptx", "PowerPoint / Keynote / Google Slides…", {
           title: "A .pptx into the Codex, editable where possible (Keynote and Google Slides: export as .pptx first)",

@@ -10,6 +10,10 @@
 //! | `GET  /updates/launchers` | `LauncherEntry[]`: every Launcher's last report, online, pending actions, newer versions in the channel |
 //! | `POST /updates/launchers/{machineId}/actions` | a `LauncherAction` (admins) → `202 LauncherEntry` |
 //! | `POST /updates/launchers/{machineId}/idn-join` | (that machine's Launcher key only) → `LauncherJoinCode`: an IDN join code for its display box's IDN Node ([`idn_join`]) |
+//! | `GET  /updates/github` | `GithubReleases`: checking Vesper's releases on GitHub (settings, last check, errors, what it brought in) |
+//! | `PUT  /updates/github` | `GithubSettings` (admins) → `GithubReleases`; checks at once when on |
+//! | `POST /updates/github/check` | (admins) → `202 GithubReleases`: checks now; `409` when off |
+//! | `GET  /updates/catalogue?machine=ID` | `Catalogue`: the products to add ("Add app"), from GitHub and the channel; with `machine`, only what that machine can run and doesn't have |
 //!
 //! A machine's **Launcher key** ([`crate::site::launchers`]) is taken by the package list and
 //! downloads and by its own machine's report, and by no other route ([`launcher_route`]).
@@ -58,6 +62,92 @@ pub(super) fn routes() -> Router<AppState> {
         )
         .route("/updates/launchers/{machine}/actions", post(queue))
         .route("/updates/launchers/{machine}/idn-join", post(idn_join))
+        .route("/updates/github", get(github).put(set_github))
+        .route("/updates/github/check", post(check_github))
+        .route("/updates/catalogue", get(catalogue))
+}
+
+async fn github(State(app): State<AppState>) -> ApiResult<protocol::GithubReleases> {
+    ok(app.shared.releases.status())
+}
+
+async fn set_github(
+    State(app): State<AppState>,
+    axum::Extension(access): axum::Extension<Access>,
+    axum::Extension(peer): axum::Extension<SocketAddr>,
+    body: Bytes,
+) -> Response {
+    let s: protocol::GithubSettings = match parse_body(&body) {
+        Ok(s) => s,
+        Err(e) => return e.into_response(),
+    };
+    let action = "updates.github";
+    let detail = json!({"settings": s});
+    let actor = match admin(&app, &access, peer, action, &detail).await {
+        Ok(a) => a,
+        Err(e) => return e.into_response(),
+    };
+    let r = app.shared.releases.set(s);
+    audit(
+        &app,
+        &actor,
+        action,
+        detail,
+        r.as_ref().err().map(|e| e.message.clone()),
+    )
+    .await;
+    match r {
+        Ok(st) => axum::Json(st).into_response(),
+        Err(e) => Error(e).into_response(),
+    }
+}
+
+async fn check_github(
+    State(app): State<AppState>,
+    axum::Extension(access): axum::Extension<Access>,
+    axum::Extension(peer): axum::Extension<SocketAddr>,
+) -> Response {
+    let detail = json!({});
+    if let Err(e) = admin(&app, &access, peer, "updates.github.check", &detail).await {
+        return e.into_response();
+    }
+    match app.shared.releases.check_now() {
+        Ok(st) => (StatusCode::ACCEPTED, axum::Json(st)).into_response(),
+        Err(e) => Error(e).into_response(),
+    }
+}
+
+/// The catalogue; with `?machine=`, what that machine's Launcher can add (its platform and
+/// roles; not what it has).
+async fn catalogue(
+    State(app): State<AppState>,
+    axum::extract::Query(q): axum::extract::Query<HashMap<String, String>>,
+) -> ApiResult<protocol::Catalogue> {
+    let mut products = app.shared.releases.catalogue(&app.shared.updates.list());
+    if let Some(m) = q.get("machine") {
+        let e = app
+            .shared
+            .updates
+            .launchers()
+            .into_iter()
+            .find(|e| &e.report.machine_id == m)
+            .ok_or_else(|| {
+                err(
+                    ErrorCode::NotFound,
+                    "no Launcher with that machine ID has reported",
+                )
+            })?;
+        let have: Vec<String> = e
+            .report
+            .products
+            .iter()
+            .filter(|p| p.version.is_some())
+            .map(|p| p.product.clone())
+            .collect();
+        products =
+            vesper_launcher::github::offered(&products, &e.report.platform, &e.report.roles, &have);
+    }
+    ok(protocol::Catalogue { products })
 }
 
 async fn list(State(app): State<AppState>) -> ApiResult<Vec<protocol::UpdatePackage>> {
@@ -347,7 +437,12 @@ async fn queue(
         Ok(a) => a,
         Err(e) => return e.into_response(),
     };
-    let r = app.shared.updates.queue(&machine, a);
+    let r = if let LauncherAction::Install { product, version } = &a {
+        install_source(&app, &machine, product, version)
+            .and_then(|()| app.shared.updates.queue(&machine, a.clone()))
+    } else {
+        app.shared.updates.queue(&machine, a.clone())
+    };
     audit(
         &app,
         &actor,
@@ -360,4 +455,60 @@ async fn queue(
         Ok(e) => (StatusCode::ACCEPTED, axum::Json(e)).into_response(),
         Err(e) => Error(e).into_response(),
     }
+}
+
+/// "Add app": the machine must be able to run `product`, and the channel or GitHub must have
+/// `version` for its platform. When only GitHub has it, the server brings it into the channel
+/// at its next check (at once), and the machine's Launcher fetches it from GitHub itself if it
+/// picks the install up first.
+fn install_source(
+    app: &AppState,
+    machine: &str,
+    product: &str,
+    version: &str,
+) -> Result<(), protocol::ApiError> {
+    let e = app
+        .shared
+        .updates
+        .launchers()
+        .into_iter()
+        .find(|e| e.report.machine_id == machine)
+        .ok_or_else(|| {
+            protocol::ApiError::new(
+                ErrorCode::NotFound,
+                "no Launcher with that machine ID has reported",
+            )
+        })?;
+    let platform = e.report.platform.clone();
+    let packages = app.shared.updates.list();
+    let in_channel = packages
+        .iter()
+        .any(|p| p.product == product && p.version == version && p.platform == platform);
+    let cat = app.shared.releases.catalogue(&packages);
+    let offered = vesper_launcher::github::offered(&cat, &platform, &e.report.roles, &[]);
+    let Some(c) = offered.iter().find(|c| c.product == product) else {
+        return Err(protocol::ApiError::new(
+            ErrorCode::Conflict,
+            format!(
+                "{} can't run {product} ({platform}, or its role), or no release has it",
+                e.report.machine_name
+            ),
+        ));
+    };
+    if in_channel {
+        return Ok(());
+    }
+    let on_github = c.sources.iter().any(|s| s == "github")
+        && [&c.stable, &c.beta]
+            .into_iter()
+            .flatten()
+            .any(|v| vesper_releases::github::same_version(v, version));
+    if !on_github {
+        return Err(protocol::ApiError::new(
+            ErrorCode::Conflict,
+            format!("neither the channel nor GitHub has {product} {version} for {platform}"),
+        ));
+    }
+    app.shared.releases.want(product, &platform);
+    Ok(())
 }

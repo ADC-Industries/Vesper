@@ -504,6 +504,11 @@ pub struct CaptionsConfig {
     )]
     #[cfg_attr(feature = "ts", ts(as = "Option<_>", optional))]
     pub model: String,
+    /// What speech recognition runs on: the CPU (default) or the GPU. A GPU that can't be used
+    /// never stops captions: they run on the CPU instead, and the captions status says why.
+    #[serde(default, skip_serializing_if = "is_default")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<_>", optional))]
+    pub processor: CaptionProcessor,
     /// Names and words to spell right ("Pastor Example, Ephesians").
     #[serde(default, skip_serializing_if = "String::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<_>", optional))]
@@ -546,6 +551,7 @@ impl Default for CaptionsConfig {
             source: CaptionSource::default(),
             language: default_caption_language(),
             model: default_caption_model(),
+            processor: CaptionProcessor::default(),
             words: String::new(),
             keep_music: false,
             max_lines: default_caption_lines(),
@@ -577,6 +583,20 @@ pub enum CaptionSource {
     /// No speech engine: lines come from another captioner (a person typing, a CART
     /// service) through `POST /api/v1/captions/lines`.
     External,
+}
+
+/// What speech recognition (whisper) runs on.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum CaptionProcessor {
+    /// The CPU, at the lowest priority (the default: on a box whose screens render on the
+    /// same GPU, whisper on the GPU costs frames).
+    #[default]
+    Cpu,
+    /// The best GPU the speech worker finds (through Vulkan); the CPU (with a note) when there
+    /// is none or it fails.
+    Gpu,
 }
 
 /// Where the captions box sits.

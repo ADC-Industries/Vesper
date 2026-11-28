@@ -995,3 +995,91 @@ pub struct ChordProParsed {
     #[ts(optional)]
     pub capo: Option<u8>,
 }
+
+/// `POST /api/v1/songselect/parse`: a song a church's subscriber downloaded from CCLI
+/// SongSelect (lyrics `.txt`, SongShow Plus `.usr` / `.bin`, ChordPro), or SongSelect lyrics
+/// pasted as text, read into a new (unsaved) presentation with its song metadata
+/// (`model::songselect`). Vesper never contacts CCLI. Create it with
+/// `POST /api/v1/presentations {document, library}`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SongSelectParse {
+    /// The file's bytes, base64 (UTF-8 with or without a byte-order mark, UTF-16 or
+    /// Windows-1252; at most 2 MiB). Give this or `text`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub data: Option<String>,
+    /// Pasted text (SongSelect lyrics, or a whole file's text).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub text: Option<String>,
+    /// The file's name: a hint for its format (`.usr` / `.bin`, `.cho` / `.chordpro` /
+    /// `.pro`); the content decides first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub file_name: Option<String>,
+    /// The presentation's name (default: the song's title, else "Untitled").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub name: Option<String>,
+    /// Lines per slide (default 0: one slide per stanza; stanzas never share a slide).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub lines_per_slide: Option<u32>,
+    /// Style the slides' text like this presentation's (its canvas too); else the default text
+    /// element.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub like: Option<model::PresentationId>,
+}
+
+/// The format a SongSelect file was read as.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum SongSelectFormat {
+    /// Lyrics text (`.txt` or pasted).
+    Lyrics,
+    /// SongShow Plus (`.usr`, `.bin`).
+    Usr,
+    /// ChordPro (SongSelect Premium).
+    ChordPro,
+}
+
+/// A presentation already in the library with the same CCLI song number.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SongSelectDuplicate {
+    /// The presentation.
+    pub id: model::PresentationId,
+    /// Its name.
+    pub name: String,
+}
+
+/// `POST /api/v1/songselect/parse`'s answer.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct SongSelectParsed {
+    /// How the file was read.
+    pub format: SongSelectFormat,
+    /// The new presentation (fresh IDs, no library): sections linked to the global groups of
+    /// the same name, `songInfo` with the title, authors, CCLI number, copyright (year and
+    /// owners as `publisher`) and key; `songInfo.display` on when it has a CCLI number, so the
+    /// copyright line (Settings ▸ CCLI) shows under the words.
+    pub presentation: model::Presentation,
+    /// Sections and slides made.
+    pub sections: u32,
+    /// See `sections`.
+    pub slides: u32,
+    /// Lines with chords (ChordPro).
+    #[serde(default)]
+    pub chord_lines: u32,
+    /// The church's CCLI licence number the file carries (`CCLI License # …`); the copyright
+    /// line uses the one in the settings.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub license_number: Option<String>,
+    /// Presentations with the same CCLI song number (skip, replace or keep both).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<SongSelectDuplicate>>", optional)]
+    pub duplicates: Vec<SongSelectDuplicate>,
+}

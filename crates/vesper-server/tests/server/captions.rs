@@ -1,7 +1,8 @@
 //! Live captions (`docs/CAPTIONS-PLAN.md`): the configuration API, lines from another
 //! captioner (the `external` source) on the captions layer, max lines, clearing, looks and
 //! the hold. The speech engine itself (whisper) needs a model of 75 MB or more and speech to
-//! hear (no speech synthesiser here): `engine_runs_on_the_program_bus` runs it when
+//! hear (no speech synthesiser here): `engine_runs_on_the_program_bus` (CPU) and
+//! `engine_runs_on_the_gpu_or_says_why_not` run it when
 //! `VESPER_TEST_WHISPER_DIR` names a folder holding `ggml-base.en.bin`. whisper runs in IDN's
 //! worker process, the `vesper` binary (`vesper --idn-captions-worker`), as in the server.
 
@@ -271,36 +272,22 @@ async fn captions_layer_with_lines_from_another_captioner() {
 }
 
 /// The speech engine on the program bus with a real model: it loads (from the data folder's
-/// model cache) and runs on the CPU. Needs `VESPER_TEST_WHISPER_DIR` (a folder with
-/// `ggml-base.en.bin`); skipped otherwise.
+/// model cache) and runs on the CPU (`processor: "cpu"`). Needs `VESPER_TEST_WHISPER_DIR` (a
+/// folder with `ggml-base.en.bin`); skipped otherwise.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn engine_runs_on_the_program_bus() {
     let Some(models) = std::env::var_os("VESPER_TEST_WHISPER_DIR") else {
         eprintln!("skipped: VESPER_TEST_WHISPER_DIR is not set");
         return;
     };
-    let fx = fixture("captions-engine");
-    let cache = fx.dir.join("cache").join("whisper");
-    std::fs::create_dir_all(&cache).unwrap();
-    let file = std::path::Path::new(&models).join("ggml-base.en.bin");
-    assert!(file.is_file(), "{} is missing", file.display());
-    #[cfg(unix)]
-    std::os::unix::fs::symlink(&file, cache.join("ggml-base.en.bin")).unwrap();
-    #[cfg(not(unix))]
-    std::fs::copy(&file, cache.join("ggml-base.en.bin")).unwrap();
-    let server = start_server_with(&fx, |c| c.captions.worker = Some(vesper())).await;
+    let (server, ws) = engine_server("captions-engine", &models, "cpu").await;
     let addr = server.addr;
-    let mut ws = Client::connect(addr, "protocolVersion=1").await;
-    let r = put_config(addr, json!({"enabled": true, "model": "base.en"})).await;
-    assert_eq!(r.status, 200, "{:?}", r.json());
-    ws.wait_state("the engine runs", |_, s| {
-        s["captions"]["status"] == "running" || s["captions"]["status"] == "error"
-    })
-    .await;
     let c = &ws.state["captions"];
     assert_eq!(c["status"], "running", "{c}");
     assert_eq!(c["model"], "base.en");
     assert!(c["device"].as_str().unwrap().starts_with("CPU"), "{c}");
+    assert_eq!(c["gpu"], false, "{c}");
+    assert!(c["note"].is_null(), "{c}");
     let models = get_json(addr, "/api/v1/captions/models").await;
     assert!(
         models
@@ -319,6 +306,64 @@ async fn engine_runs_on_the_program_bus() {
     tokio::time::sleep(Duration::from_secs(2)).await;
     assert!(lines(&ws.state).is_empty(), "{}", ws.state["captions"]);
     server.shutdown().await.unwrap();
+}
+
+/// The speech engine with `processor: "gpu"`: on the box's GPU (Vulkan, in the worker) when
+/// it has one, else on the CPU with a note saying why; either way captions run. Needs
+/// `VESPER_TEST_WHISPER_DIR`, as above.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn engine_runs_on_the_gpu_or_says_why_not() {
+    let Some(models) = std::env::var_os("VESPER_TEST_WHISPER_DIR") else {
+        eprintln!("skipped: VESPER_TEST_WHISPER_DIR is not set");
+        return;
+    };
+    let (server, ws) = engine_server("captions-engine-gpu", &models, "gpu").await;
+    let c = &ws.state["captions"];
+    eprintln!("captions on: {c}");
+    assert_eq!(c["status"], "running", "{c}");
+    let device = c["device"].as_str().unwrap();
+    if c["gpu"] == true {
+        assert!(!device.starts_with("CPU"), "{c}");
+        assert!(c["note"].is_null(), "{c}");
+    } else {
+        assert!(device.starts_with("CPU"), "{c}");
+        assert!(c["note"].as_str().is_some_and(|n| n.contains("CPU")), "{c}");
+    }
+    #[cfg(target_os = "linux")]
+    assert!(!captions_workers().is_empty(), "no worker");
+    server.shutdown().await.unwrap();
+}
+
+/// A server whose captions run `base.en` (from `models`) on `processor`, once the engine is
+/// running or has failed (the state then in the client).
+async fn engine_server(
+    name: &str,
+    models: &std::ffi::OsStr,
+    processor: &str,
+) -> (vesper_server::RunningServer, Client) {
+    let fx = fixture(name);
+    let cache = fx.dir.join("cache").join("whisper");
+    std::fs::create_dir_all(&cache).unwrap();
+    let file = std::path::Path::new(&models).join("ggml-base.en.bin");
+    assert!(file.is_file(), "{} is missing", file.display());
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&file, cache.join("ggml-base.en.bin")).unwrap();
+    #[cfg(not(unix))]
+    std::fs::copy(&file, cache.join("ggml-base.en.bin")).unwrap();
+    let server = start_server_with(&fx, |c| c.captions.worker = Some(vesper())).await;
+    let addr = server.addr;
+    let mut ws = Client::connect(addr, "protocolVersion=1").await;
+    let r = put_config(
+        addr,
+        json!({"enabled": true, "model": "base.en", "processor": processor}),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{:?}", r.json());
+    ws.wait_state("the engine runs", |_, s| {
+        s["captions"]["status"] == "running" || s["captions"]["status"] == "error"
+    })
+    .await;
+    (server, ws)
 }
 
 /// The `vesper` binary: IDN's captions worker in the server (`vesper --idn-captions-worker`).

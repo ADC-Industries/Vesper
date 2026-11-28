@@ -284,6 +284,44 @@ few runs are in.
     recording FAIL in run 2's summary was the harness: its last sample came after it had
     stopped the recording (fixed: the watcher stops first).
 
+- **Lane G, 2026-11-27: captions' worker on the CPU and on the GPU** (IDN Beta18; whisper in
+  IDN's worker process, the `vesper` binary). Two 30-min runs back to back under the build lock
+  (`--outputs 2`, captions `base.en`, recording, server at nice 10), compared with the earlier
+  run of the worker at IDN's defaults (`Priority::Low`, 14 threads). The worker's CPU and memory
+  were sampled from `/proc` (it is a child of the server, outside the harness's numbers), the GPU
+  from amdgpu's sysfs (`gpu_busy_percent`, `mem_info_vram_used`); the box's only GPU (a built-in
+  Radeon 680M) renders the screens, decodes the video and runs the worker's Vulkan.
+
+  | 30 min each | worker at IDN's defaults (earlier) | CPU, lowest priority, 8 threads (main) | GPU (Vulkan), lowest priority, 4 threads |
+  |---|---|---|---|
+  | late + dropped frames, whole run | 536 (17.8/min) | **9 (0.3/min)** | 2327 (77/min) |
+  | during the video with sound | 521 (84/min) | **7 (1.1/min)** | 2262 (367/min) |
+  | worst minute | 103.5 | 3 | 391 |
+  | worker CPU (cores), mean / during the video | not measured | 1.8 / 6.4 (max 8.0) | 0.02 / 0.08 |
+  | worker resident memory | not measured | 373 MB | 139 MB (+ ~390 MB of VRAM) |
+  | GPU busy, mean / during the video | not measured | 6.5 % / 10 % | 7.3 % / 23 % |
+  | captions load (work per second of sound), median / max | not sampled | 0.86 / 1.78 | 0.13 / 0.15 |
+  | load average (1 min), median / max; during the video | 3.3 / 11.5; 6.2 | 3.1 / 8.8; 4.8 | 1.7 / 4.1; 1.7 |
+  | output receiver timecode gaps | 2 | 59 (57 in one burst at 21 s) | 0 |
+
+  - **The CPU at the lowest priority on half the CPUs fixes the late frames** (main c922f66):
+    1.1 a minute during the video with sound, against 84 at IDN's defaults; the run passes
+    every check. whisper keeps up on average (load 0.86) but falls behind for a moment while
+    the sync clip plays (1.78): captions come later then, frames don't.
+  - **The GPU costs frames on a box whose screens render on the same GPU:** 367 late renders a
+    minute during the video with sound, though the machine was almost idle (load 1.7) and
+    whisper was six times faster (0.13). nice and the idle class rank CPU threads, not GPU
+    work: each pass's burst of compute (up to 100 % busy) holds the GPU the screens need.
+    **The CPU stays the default** (`docs/CAPTIONS-PLAN.md`); the GPU is a choice for a card
+    the screens don't use (IDN Beta18 can't be told which GPU to use: the best one, a card of
+    its own first).
+  - **The 59 timecode gaps** of the CPU run: 57 came in one 5-second sample 16–21 s into the
+    run (pre-service: the receiver got 93 frames instead of 150, a stretch of about 1.9 s
+    missing), the other 2 single frames, as in earlier runs (0–2). The server counted no late
+    or dropped frame then and logged nothing; the GPU run had none. Not attributable from these
+    numbers (the probe's receiver in the harness, or the network path at start); the harness
+    logs only a total, so it should log each gap's time and length to tell a burst from many.
+
 ## Not covered yet
 
 - A sound card unplugged during the run (no removable card on the soak box): the server's lost

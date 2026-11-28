@@ -57,6 +57,8 @@ class Shell {
   messageEditor = $state.raw<{ entry: MessageEntry | null } | null>(null);
   /** The ChordPro dialog (batch 16): import a song, or add a ChordPro file's chords to one. */
   chordPro = $state.raw<{ mode: "import" } | { mode: "apply"; presentation: string } | null>(null);
+  /** The SongSelect import dialog (files, or pasted lyrics: `text` from Reflow's smart paste). */
+  songSelect = $state.raw<{ text?: string } | null>(null);
   /** Where to go once the Screens page's unsaved changes are settled. */
   private pending: Route | null = null;
 
@@ -148,6 +150,7 @@ class Shell {
     this.showLive = false;
     this.messageEditor = null;
     this.chordPro = null;
+    this.songSelect = null;
     this.popover = null;
     this.menuOpen = false;
     this.contextMenu = null;
@@ -177,6 +180,7 @@ class Shell {
     this.showLive = false;
     this.messageEditor = null;
     this.chordPro = null;
+    this.songSelect = null;
     this.popover = null;
     this.contextMenu = null;
     if (this.prompt) {
@@ -202,6 +206,7 @@ class Shell {
       this.showLive ||
       this.messageEditor !== null ||
       this.chordPro !== null ||
+      this.songSelect !== null ||
       this.popover !== null ||
       this.prompt !== null ||
       this.contextMenu !== null
@@ -253,6 +258,10 @@ class Shell {
       case "importChordPro":
         if (!this.closeDialogs()) return;
         this.chordPro = { mode: "import" };
+        return;
+      case "importSongSelect":
+        if (!this.closeDialogs()) return;
+        this.songSelect = {};
         return;
       case "newPlaylist":
         return void session.newPlaylist(false);

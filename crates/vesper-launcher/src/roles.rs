@@ -660,11 +660,9 @@ impl Launcher {
     /// The Vesper server's service on (enabled and started) or off (stopped and disabled).
     async fn server_service(self: &Arc<Self>, on: bool) -> Result<Option<String>, String> {
         let Some(p) = self
-            .config()
-            .products
-            .iter()
+            .products()
+            .into_iter()
             .find(|p| p.product == protocol::PRODUCT_ID)
-            .cloned()
         else {
             return if on {
                 Err(if cfg!(windows) {

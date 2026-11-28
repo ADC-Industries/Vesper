@@ -45,6 +45,17 @@ export default async function ({ page, stub, settle, shot, step }) {
             await captions(stub.url, { downloading: { model: "small.en", downloaded: 233_000_000, size: 466_000_000 } });
             await settle(400);
             await shot("settings-captions-download");
+            // The GPU failed: captions go on on the CPU, the note says why.
+            await captions(stub.url, { gpuFailed: true });
+            await settle(400);
+            await shot("settings-captions-gpu-fallback");
+            // The GPU chosen and in use: the warning about frames under the choice.
+            await captions(stub.url, { onGpu: true });
+            await page.getByTestId("captions-processor").selectOption("gpu");
+            await settle(400);
+            if (!(await page.getByTestId("captions-gpu-hint").isVisible())) throw new Error("no GPU warning");
+            await shot("settings-captions-gpu");
+            await page.getByTestId("captions-processor").selectOption("cpu");
           } finally {
             await captions(stub.url, { reset: true });
             await settle(200);

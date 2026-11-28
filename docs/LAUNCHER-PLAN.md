@@ -40,8 +40,10 @@ service's local API. Servers have no tray: the same service reports to the site,
 - **Where updates come from:** the site's Vesper server (the Site Manager box) is the channel,
   LAN-only. An admin uploads signed packages in Oriel (Site ▸ Updates), the server keeps them in
   `<data>/updates/`, lists them by product, platform and version, and serves the files to the
-  site's Launchers. Nothing reaches out to the internet; how the owner's releases get to the
-  church (download, USB) is outside Vesper.
+  site's Launchers. Since the GitHub releases (2026-11-27, [below](#releases-from-github)) the
+  server also brings Vesper's signed releases from GitHub into the channel by itself, and a
+  Launcher without a church server checks GitHub directly; an admin's upload still works the
+  same (a site without internet, a USB stick).
 - **Signing (recommended): Ed25519 in minisign's format.** The owner generates the key pair once
   with `minisign -G` on their own machine; **the private key never enters the repository or the
   build machine** (keep it offline, with a backup). Releases are signed with
@@ -261,6 +263,57 @@ Done in batch 15 (owner: **the IDN Node is bundled with the Launcher**).
 - **Headless join:** `vesper-launcher join [CODE] [--server HOST] [--role display|presentation]
   [--no-wait]`, through the running service's local API; without `--server`, the only Vesper
   server found on the network.
+
+## Releases from GitHub
+
+Owner decisions 2026-11-27: releases live on `github.com/ADC-Industries/Vesper`, one release line
+per product told apart by the tag prefix (`server-v`, `oriel-v`, `launcher-v`, `idn-node-v`;
+stable = a normal release, beta = a GitHub pre-release), every asset signed with the automation
+key. `scripts/release.sh` makes them (`docs/PACKAGING.md`, "Releases"). The shared checker is
+`crates/vesper-releases` (`github`; `sign` and `package` moved there from the Launcher, which
+re-exports them): the unauthenticated GitHub API with the last list's ETag, a rate limit
+remembered until it ends, "offline" told apart, the channel and tag-prefix filter, the
+release's `manifest.json` to find a product's package for a platform (only a hint: nothing in it
+is trusted), and the download of the package and its `.minisig` into a staging folder with size
+limits, verified with the trusted keys; the trusted comment must name the product, the
+release's version (`0.3.8~beta18` is `idn-node-v0.3.8-beta18`'s) and the platform, or the
+package is refused and removed.
+
+- **The church server** (`crates/vesper-server/src/releases.rs`) checks every 6 hours by
+  default (failures back off from 5 minutes, at most to the interval), for each product and
+  platform the site has (its Launchers' reports, the server itself, what "Add app" asked for):
+  the newest release in the channel the channel doesn't have yet comes in as if an admin
+  uploaded it, with "from GitHub" as its source; the two newest per product and platform are
+  kept. Oriel's Site ▸ Updates shows the last check, the error, the next check, what came in,
+  and the settings (on/off, stable/beta, how often, the repository; admins). Installing stays an
+  admin's action (or the install window), with the Launcher's rules and rollback. Errors are
+  logged once per kind, not at every try.
+- **The Launcher directly** (`crates/vesper-launcher/src/github.rs`): with no church server (not
+  joined, no channel configured, or no report reached the site's server for a day,
+  `github.directAfterSecs`), it checks GitHub itself every 6 hours for its own products; a newer
+  version shows as "Update available" in its window, and the update downloads and verifies the
+  package exactly as a channel package would be, then installs with the same rules. An update
+  or install the channel can't serve (no channel, the channel doesn't have it, the server
+  can't be reached) is fetched from GitHub when checking is on; a package refused for its
+  signature is never fetched elsewhere. Configuration: `"github": {"enabled", "repository",
+  "channel", "intervalHours", "api", "directAfterSecs"}` in `launcher.json` (all optional).
+- **"Add app".** The catalogue (`GET /api/v1/updates/catalogue`, the Launcher's `GET
+  /launcher/v1/catalogue`): per product the newest stable version, a newer beta, the platforms,
+  and where it comes from (the site's channel, GitHub). A machine is offered only what it can
+  run and doesn't have: a package for its platform, not the Launcher or its tray (they come with
+  the Launcher), no Vesper server on a display box, and what the Launcher knows how to install
+  there (`github::template`: the server as `.deb` or NSIS, the bundled IDN Node and Oriel as
+  `.deb` packages of programs; Oriel's Windows installer installs per user, so the Launcher,
+  running as SYSTEM, doesn't offer it on Windows). In the Launcher's window: Add app → pick → it
+  downloads (the church server if it has the package, else GitHub), verifies, installs, and
+  manages the product from then on (`added-products.json` in its state folder; a product whose
+  first install failed is forgotten again). In Oriel: "Add app to <machine>…" queues an
+  `install` action for the machine's Launcher; a version only GitHub has is brought into the
+  channel at once.
+
+Not covered here: `dpkg -i` doesn't fetch a package's system dependencies from apt, so adding the
+Vesper server to a machine without FFmpeg's libraries fails (as an update would) and says so;
+the first real release (the owner decides when) and a real download from github.com.
 
 ## Deferred (said so in Oriel where it matters)
 

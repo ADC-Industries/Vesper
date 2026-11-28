@@ -38,6 +38,20 @@ On Linux the server uses the system FFmpeg from `apt` (linked dynamically, never
 VA-API hardware decode. On Windows the server ships a shared, LGPL-only FFmpeg build next to
 `vesper.exe`. Packages and installers are described in [`docs/PACKAGING.md`](docs/PACKAGING.md).
 
+## Releases
+
+Releases are published on this repository's GitHub Releases page, one release line per product,
+told apart by the tag's prefix: `server-v<version>` (the Vesper server), `oriel-v<version>`
+(Vesper Oriel), `launcher-v<version>` (the Vesper Launcher and its tray) and
+`idn-node-v<version>` (the IDN Node the Launcher bundles). A normal release is the **stable**
+channel; a GitHub pre-release is a **beta**. Every file is signed with the Vesper release key
+in [minisign](https://jedisct1.github.io/minisign/)'s format (its `.minisig` beside it; the
+public key is `packaging/keys/vesper-automation.pub`), and each release's `manifest.json` lists
+its files with their platform, size and SHA-256. Check a download by hand with
+`minisign -V -p packaging/keys/vesper-automation.pub -m <file>`. The Vesper Launcher and the
+church's Vesper server find, check and install new releases themselves
+([`docs/PACKAGING.md`](docs/PACKAGING.md), "Releases").
+
 ## Building and testing
 
 You need a recent stable Rust toolchain, Node.js with npm (for Oriel), the FFmpeg development

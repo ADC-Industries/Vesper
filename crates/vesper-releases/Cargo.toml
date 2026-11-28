@@ -1,0 +1,29 @@
+[package]
+name = "vesper-releases"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Vesper's signed packages (minisign-compatible signatures, the signed product/version/platform) and its releases on GitHub: listing, channels, downloading and verifying"
+
+[dependencies]
+protocol = { path = "../protocol" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tracing = "0.1.44"
+# GitHub's API and downloads over HTTPS (rustls with the web's root certificates), as
+# vesper-translate.
+ureq = { version = "3.5.2", default-features = false, features = ["rustls"] }
+# Package signatures: Ed25519 in minisign's format (prehashed with BLAKE2b-512), see `sign`.
+ed25519-dalek = "2.2.0"
+blake2 = "0.10.6"
+base64 = "0.22.1"
+sha2 = "0.11.1"
+getrandom = "0.4.3"
+
+[features]
+# A fake GitHub for tests (`fake`), here and in the Launcher's and the server's tests.
+fake = []
+
+[dev-dependencies]
+vesper-releases = { path = ".", features = ["fake"] }
+tempfile = "3.27.0"

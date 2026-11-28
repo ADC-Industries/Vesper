@@ -1,6 +1,6 @@
 //! Live captions (`docs/CAPTIONS-PLAN.md`): speech from a sound source turned into caption
-//! lines by IDN's `idn-captions` (whisper.cpp on this machine, on the CPU) and drawn on the
-//! captions layer.
+//! lines by IDN's `idn-captions` (whisper.cpp on this machine, on its GPU or CPU) and drawn on
+//! the captions layer.
 //!
 //! - **Whisper's process.** IDN runs whisper in a worker process below normal priority (IDN
 //!   v0.3.8-Beta18: Windows' below-normal priority class, nice 10 elsewhere), so captions
@@ -11,6 +11,13 @@
 //!   fails meanwhile (a pass too slow, a worker that ended and is being started again by IDN)
 //!   shows as the status's error until a step works again. Neither stops the server.
 //!
+//! - **Processor** ([`model::CaptionProcessor`]): whisper on the CPU (the default), or on the
+//!   GPU when chosen (Vulkan, in the worker process: never a second Vulkan instance in the
+//!   server; on a box whose screens render on the same GPU it costs frames, see
+//!   `docs/SOAK-PLAN.md`). A GPU that can't load the model (no memory, a driver error) gives way to the
+//!   CPU at once, and a GPU worker that ends is started again on the CPU by IDN; either way
+//!   captions go on, the status's `note` says why, until the engine restarts. The GPU path is
+//!   built on Linux always and elsewhere with the `gpu-captions` feature ([`GPU_BUILT`]).
 //! - **Hub** ([`Hub`], in [`Shared`]): the box's [`CaptionsConfig`], the engine's status and
 //!   the lines. Lines come from the engine's worker or from `POST /captions/lines` (another
 //!   captioner); both go through [`Hub::line`]. Each change wakes the show actor
@@ -37,7 +44,7 @@
 //!   "Captions" (`text/1`).
 
 use crate::{Shared, lock};
-use model::{CaptionPosition, CaptionSource, CaptionsConfig};
+use model::{CaptionPosition, CaptionProcessor, CaptionSource, CaptionsConfig};
 use protocol::{CaptionLineState, CaptionsState, CaptionsStatus};
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -66,6 +73,10 @@ pub const RETRY: [Duration; 4] = [
     Duration::from_secs(60),
     Duration::from_secs(300),
 ];
+
+/// whisper can run on a GPU in this build (IDN's `gpu` feature: on Linux always, elsewhere
+/// with this crate's `gpu-captions` feature).
+pub const GPU_BUILT: bool = cfg!(any(target_os = "linux", feature = "gpu-captions"));
 
 /// How the speech engine runs (the server's [`crate::ServerConfig::captions`]).
 #[derive(Clone, Debug, Default)]
@@ -131,6 +142,10 @@ struct Status {
     downloaded: Option<(u64, Option<u64>)>,
     model: Option<String>,
     device: Option<String>,
+    /// `device` is a GPU.
+    gpu: Option<bool>,
+    /// Why whisper isn't on the processor chosen.
+    note: Option<String>,
     load: Option<f64>,
 }
 
@@ -283,7 +298,8 @@ impl Hub {
             cfg.model,
             cfg.language,
             cfg.words,
-            cfg.keep_music
+            cfg.keep_music,
+            cfg.processor
         ])
         .to_string();
         {
@@ -509,6 +525,8 @@ impl Hub {
             download_size: s.downloaded.and_then(|d| d.1),
             model: s.model.clone(),
             device: s.device.clone(),
+            gpu: s.gpu,
+            note: s.note.clone(),
             load: s.load,
             lines,
         }
@@ -666,128 +684,173 @@ fn worker_main(
         return;
     }
     // Whisper's passes must never take the CPU from the screens' frames: IDN runs them in its
-    // worker process below normal priority (`Priority::Low`, the default), every thread of it
-    // (IDN Beta18, H05-1), on IDN's default thread count. This thread stays at the server's
-    // priority: it starts the worker, which would otherwise inherit a lowered nice value on
-    // Linux and could not set its own (raising a priority again needs privileges).
-    let engine_cfg = idn_captions::EngineConfig {
+    // worker process (IDN Beta18, H05-1), here at the lowest priority (nice 19 / the idle
+    // class) and on half the CPUs. The worker's default (below normal, nice 10, all CPUs but
+    // two) brought back 84 late frames a minute during video with sound in a 30-min soak
+    // (2026-11-27, `docs/SOAK-PLAN.md`): fourteen busy threads still crowd the render and
+    // output threads. This thread stays at the server's priority: it starts the worker, which
+    // would otherwise inherit a lowered nice value on Linux and could not set its own.
+    // On the GPU too (Vulkan, in the worker), at the same lowest priority: the worker's CPU
+    // threads still prepare each pass (the sound's spectrum, the decoding around the GPU's
+    // work), fewer of them than on the CPU.
+    let engine_cfg = |gpu: bool| idn_captions::EngineConfig {
         lang: cfg.language.clone(),
         words: cfg.words.clone(),
         keep_music: cfg.keep_music,
-        // CPU only (see `docs/CAPTIONS-PLAN.md`): built without the crate's GPU feature.
-        gpu: false,
+        priority: idn_captions::Priority::Lowest,
+        threads: whisper_threads(gpu),
+        gpu,
         worker: options.worker.clone(),
         ..Default::default()
     };
-    // The model: chosen (auto), fetched when missing; a test's file as it is.
-    let name = if let Some(file) = &options.model_file {
-        file.file_name()
-            .and_then(|n| n.to_str())
-            .and_then(|n| n.strip_prefix("ggml-"))
-            .and_then(|n| n.strip_suffix(".bin"))
-            .unwrap_or("test")
-            .to_string()
-    } else if cfg.model == "auto" && cfg.language != "en" {
-        "large-v3-turbo".to_string()
-    } else if cfg.model == "auto" {
+    let want_gpu = cfg.processor == CaptionProcessor::Gpu;
+    // Why whisper isn't where it was asked to run (shown with the status), when it isn't.
+    let unbuilt = (want_gpu && !GPU_BUILT)
+        .then(|| "this server is built without GPU captions: captions run on the CPU".to_string());
+    // The GPU is tried first on each load; a GPU that fails gives way to the CPU at once.
+    let mut gpu = want_gpu && GPU_BUILT;
+    // The GPU's load error, while the CPU is being tried after it.
+    let mut gpu_failed: Option<String> = None;
+    // The model, fetched, and loaded where it runs: tried again after a while when it can't be.
+    let mut failed = 0;
+    let (name, mut engine, note) = loop {
+        // The model: chosen (auto), fetched when missing; a test's file as it is.
+        let name = if let Some(file) = &options.model_file {
+            file.file_name()
+                .and_then(|n| n.to_str())
+                .and_then(|n| n.strip_prefix("ggml-"))
+                .and_then(|n| n.strip_suffix(".bin"))
+                .unwrap_or("test")
+                .to_string()
+        } else if cfg.model == "auto" && cfg.language != "en" {
+            "large-v3-turbo".to_string()
+        } else if cfg.model == "auto" {
+            report(&|h| {
+                h.set_status(
+                    CaptionsStatus::Starting,
+                    Some("choosing a model for this box".into()),
+                )
+            });
+            // The models it tries are downloaded as it goes: the same progress as below. While a
+            // download runs (a callback in the last 2 s, not finished), its log lines don't
+            // replace the progress in the status.
+            let busy: std::cell::Cell<Option<Instant>> = std::cell::Cell::new(None);
+            let mut log = |m: &str| {
+                tracing::info!("captions: {m}");
+                if busy
+                    .get()
+                    .is_some_and(|t| t.elapsed() < Duration::from_secs(2))
+                {
+                    return;
+                }
+                let m = m.to_string();
+                report(&|h| h.set_status(CaptionsStatus::Starting, Some(m.clone())));
+            };
+            let mut fetch = Download::default();
+            let mut progress = |model: &str, n: u64, total: Option<u64>| {
+                let done = total.is_some_and(|t| n >= t);
+                busy.set((!done).then(Instant::now));
+                if fetch.step(model, n, total) {
+                    report(&|h| h.downloading(model, n, total));
+                }
+            };
+            match idn_captions::auto_choose_stop(
+                &dir,
+                &engine_cfg(gpu),
+                &mut log,
+                &mut progress,
+                &stop,
+            ) {
+                Ok(m) => m,
+                Err(e) if e == idn_captions::STOPPED => {
+                    tracing::debug!("captions: stopped while choosing a model");
+                    return;
+                }
+                Err(e) => {
+                    report(&|h| h.fail(format!("no model: {e}")));
+                    return;
+                }
+            }
+        } else {
+            cfg.model.clone()
+        };
+        if stop.load(Ordering::Relaxed) {
+            return;
+        }
+        let mut fetch = Download::default();
+        let path = match &options.model_file {
+            Some(file) => Ok(file.clone()),
+            None => idn_captions::ensure_model_stop(
+                &dir,
+                &name,
+                &mut |n, total| {
+                    if fetch.step(&name, n, total) {
+                        report(&|h| h.downloading(&name, n, total));
+                    }
+                },
+                &stop,
+            ),
+        };
+        let path = match path {
+            Ok(p) => p,
+            Err(e) if e == idn_captions::STOPPED => {
+                tracing::debug!(model = %name, "captions: stopped while fetching the model");
+                return;
+            }
+            Err(e) => {
+                report(&|h| h.fail(e.clone()));
+                return;
+            }
+        };
+        if stop.load(Ordering::Relaxed) {
+            return;
+        }
         report(&|h| {
             h.set_status(
                 CaptionsStatus::Starting,
-                Some("choosing a model for this box".into()),
+                Some(format!("loading the {name} model")),
             )
         });
-        // The models it tries are downloaded as it goes: the same progress as below. While a
-        // download runs (a callback in the last 2 s, not finished), its log lines don't
-        // replace the progress in the status.
-        let busy: std::cell::Cell<Option<Instant>> = std::cell::Cell::new(None);
-        let mut log = |m: &str| {
-            tracing::info!("captions: {m}");
-            if busy
-                .get()
-                .is_some_and(|t| t.elapsed() < Duration::from_secs(2))
-            {
-                return;
-            }
-            let m = m.to_string();
-            report(&|h| h.set_status(CaptionsStatus::Starting, Some(m.clone())));
-        };
-        let mut fetch = Download::default();
-        let mut progress = |model: &str, n: u64, total: Option<u64>| {
-            let done = total.is_some_and(|t| n >= t);
-            busy.set((!done).then(Instant::now));
-            if fetch.step(model, n, total) {
-                report(&|h| h.downloading(model, n, total));
-            }
-        };
-        match idn_captions::auto_choose_stop(&dir, &engine_cfg, &mut log, &mut progress, &stop) {
-            Ok(m) => m,
-            Err(e) if e == idn_captions::STOPPED => {
-                tracing::debug!("captions: stopped while choosing a model");
-                return;
-            }
-            Err(e) => {
-                report(&|h| h.fail(format!("no model: {e}")));
-                return;
-            }
-        }
-    } else {
-        cfg.model.clone()
-    };
-    if stop.load(Ordering::Relaxed) {
-        return;
-    }
-    let mut fetch = Download::default();
-    let path = match &options.model_file {
-        Some(file) => Ok(file.clone()),
-        None => idn_captions::ensure_model_stop(
-            &dir,
-            &name,
-            &mut |n, total| {
-                if fetch.step(&name, n, total) {
-                    report(&|h| h.downloading(&name, n, total));
-                }
-            },
-            &stop,
-        ),
-    };
-    let path = match path {
-        Ok(p) => p,
-        Err(e) if e == idn_captions::STOPPED => {
-            tracing::debug!(model = %name, "captions: stopped while fetching the model");
+        // IDN refuses an English-only model for another language (Beta11); the settings are
+        // checked as they are saved, so only a file from before that check gets here.
+        if !idn_captions::model_speaks(&name, &cfg.language) {
+            report(&|h| {
+                h.fail(format!(
+                    "{name} understands English only: choose auto or large-v3-turbo for {}",
+                    cfg.language
+                ))
+            });
             return;
         }
-        Err(e) => {
-            report(&|h| h.fail(e.clone()));
-            return;
-        }
-    };
-    if stop.load(Ordering::Relaxed) {
-        return;
-    }
-    report(&|h| {
-        h.set_status(
-            CaptionsStatus::Starting,
-            Some(format!("loading the {name} model")),
-        )
-    });
-    // IDN refuses an English-only model for another language (Beta11); the settings are
-    // checked as they are saved, so only a file from before that check gets here.
-    if !idn_captions::model_speaks(&name, &cfg.language) {
-        report(&|h| {
-            h.fail(format!(
-                "{name} understands English only: choose auto or large-v3-turbo for {}",
-                cfg.language
-            ))
-        });
-        return;
-    }
-    // Loaded in the worker; a load that fails (the worker ended twice, was too slow, or
-    // refused the model) is tried again after a while, the error shown meanwhile.
-    let mut failed = 0;
-    let mut engine = loop {
-        match idn_captions::Engine::new(&path, engine_cfg.clone()) {
-            Ok(e) => break e,
+        // Loaded in the worker. On the GPU, a load that fails (no memory, a driver error) is
+        // tried on the CPU at once; a load that fails on the CPU too (the worker ended twice, was
+        // too slow, or refused the model) is tried again after a while, the error shown meanwhile.
+        match idn_captions::Engine::new(&path, engine_cfg(gpu)) {
+            Ok(e) => {
+                let on_gpu = is_gpu(&e.device);
+                let note = match (&gpu_failed, on_gpu) {
+                    (Some(why), _) => Some(format!(
+                        "the GPU couldn't load the {name} model ({why}): captions run on the CPU \
+                     until they are switched off and on again or the settings change"
+                    )),
+                    (None, false) if want_gpu => unbuilt.clone().or_else(|| {
+                        Some("no GPU this server can use (Vulkan): captions run on the CPU".into())
+                    }),
+                    _ => None,
+                };
+                break (name, e, note);
+            }
+            Err(e) if gpu => {
+                tracing::warn!(model = %name, "captions: the GPU couldn't load the model, trying the CPU: {e}");
+                gpu = false;
+                gpu_failed = Some(e);
+                continue;
+            }
             Err(e) => {
+                // Failing on the CPU too: the model, not the GPU, is the likely cause. The next
+                // try starts on the GPU again.
+                gpu_failed = None;
+                gpu = want_gpu && GPU_BUILT;
                 let wait = RETRY[failed.min(RETRY.len() - 1)];
                 failed += 1;
                 report(&|h| {
@@ -830,10 +893,15 @@ fn worker_main(
         s.detail = None;
         s.model = Some(name.clone());
         s.device = Some(engine.device.clone());
+        s.gpu = Some(is_gpu(&engine.device));
+        s.note = note.clone();
         s.load = None;
         drop(s);
         h.changed.notify_one();
     });
+    if let Some(n) = &note {
+        tracing::warn!("captions: {n}");
+    }
     tracing::info!(
         model = %name,
         device = %engine.device,
@@ -867,15 +935,21 @@ fn worker_main(
                     let mut s = lock(&h.status);
                     // A worker started again may run elsewhere (IDN: on the CPU after one
                     // that ended loading the model on the GPU).
-                    let changed = recovered
-                        || s.load != Some(load)
-                        || s.device.as_deref() != Some(engine.device.as_str());
+                    let moved = s.device.as_deref() != Some(engine.device.as_str());
+                    let changed = recovered || moved || s.load != Some(load);
                     if recovered {
                         s.status = CaptionsStatus::Running;
                         s.detail = None;
                     }
+                    if moved && s.gpu == Some(true) && !is_gpu(&engine.device) {
+                        let n = "whisper's GPU worker ended: captions run on the CPU until they \
+                                 are switched off and on again or the settings change";
+                        tracing::warn!("captions: {n}");
+                        s.note = Some(n.into());
+                    }
                     s.load = Some(load);
                     s.device = Some(engine.device.clone());
+                    s.gpu = Some(is_gpu(&engine.device));
                     drop(s);
                     if changed {
                         h.changed.notify_one();
@@ -960,9 +1034,48 @@ fn reader(
     }
 }
 
+/// Whisper's CPU threads: half this machine's CPUs (at least 1, at most 8), so a pass never
+/// fills every core while the screens render; on the GPU at most 4 (the CPU's share of a
+/// pass is small there; IDN starts a worker that ended on the GPU again on the CPU, with
+/// these).
+fn whisper_threads(gpu: bool) -> usize {
+    let half = std::thread::available_parallelism()
+        .map(|n| (n.get() / 2).clamp(1, 8))
+        .unwrap_or(2);
+    if gpu { half.min(4) } else { half }
+}
+
+/// Whether whisper's device (`Engine::device`: the GPU's name, or "CPU (N threads)") is a GPU.
+fn is_gpu(device: &str) -> bool {
+    !device.starts_with("CPU")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// whisper's device as IDN names it: a GPU's name, or "CPU (N threads)"; fewer CPU threads
+    /// on the GPU, never more than on the CPU.
+    #[test]
+    fn the_device_says_gpu_or_cpu() {
+        assert!(!is_gpu("CPU (8 threads)"));
+        assert!(is_gpu("Synthetic GPU 1"));
+        assert!(whisper_threads(true) <= 4);
+        assert!(whisper_threads(true) <= whisper_threads(false));
+        assert!((1..=8).contains(&whisper_threads(false)));
+    }
+
+    /// An old settings file without a processor reads as the CPU (the default, left out when
+    /// saved); the GPU only when chosen.
+    #[test]
+    fn the_processor_defaults_to_the_cpu() {
+        let cfg: CaptionsConfig = serde_json::from_str(r#"{"enabled": true}"#).unwrap();
+        assert_eq!(cfg.processor, CaptionProcessor::Cpu);
+        let gpu: CaptionsConfig = serde_json::from_str(r#"{"processor": "gpu"}"#).unwrap();
+        assert_eq!(gpu.processor, CaptionProcessor::Gpu);
+        assert!(serde_json::from_str::<CaptionsConfig>(r#"{"processor": "auto"}"#).is_err());
+        assert!(!serde_json::to_string(&cfg).unwrap().contains("processor"));
+    }
 
     /// F04-4: the language is checked as it is stored (trimmed, lower case).
     #[test]

@@ -44,4 +44,9 @@ trustedComment: string,
 /**
  * When it was uploaded (RFC 3339 UTC).
  */
-uploadedAt: string, };
+uploadedAt: string, 
+/**
+ * Where it came from: `github` (the server's GitHub release checker, [`GithubReleases`]);
+ * absent: uploaded by an admin.
+ */
+source?: string, };

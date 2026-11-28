@@ -47,6 +47,22 @@ const site = createServer((req, res) => {
 });
 await new Promise((r) => site.listen(0, "127.0.0.1", r));
 const sitePort = site.address().port;
+// A stand-in for GitHub: Vesper's releases ("Add app" lists the ones this machine can run).
+// Packages aren't served: the shots don't install anything.
+const ghRelease = (tag, files) => ({ tag_name: tag, prerelease: false, draft: false, assets: files.map((name) => ({ name, size: 1, browser_download_url: `http://127.0.0.1:${gh.address().port}/download/${tag}/${name}` })) });
+const ghManifests = {
+  "oriel-v0.2.0": { assets: [{ product: "vesper-oriel", platform: "linux-x86_64", file: "vesper-oriel_0.2.0_amd64.deb" }] },
+  "idn-node-v0.3.8-beta18": { assets: [{ product: "vesper-idn-node", platform: "linux-x86_64", file: "vesper-idn-node_0.3.8~beta18-1_amd64.deb" }] },
+};
+const gh = createServer((req, res) => {
+  const u = req.url;
+  if (u.startsWith("/repos/"))
+    return json(res, 200, Object.entries(ghManifests).map(([tag, m]) => ghRelease(tag, ["manifest.json", ...m.assets.flatMap((a) => [a.file, a.file + ".minisig"])])));
+  const m = /^\/download\/([^/]+)\/manifest\.json$/.exec(u);
+  if (m && ghManifests[m[1]]) return json(res, 200, ghManifests[m[1]]);
+  json(res, 404, { message: "Not Found" });
+});
+await new Promise((r) => gh.listen(0, "127.0.0.1", r));
 // The product's health check: the installed Vesper answers with its version.
 const product = createServer((req, res) => json(res, 200, { version: "0.1.0" }));
 await new Promise((r) => product.listen(0, "127.0.0.1", r));
@@ -100,6 +116,7 @@ writeFileSync(
       { product: "oriel", name: "Vesper Oriel", install: { kind: "dir" }, healthUrl: "http://127.0.0.1:9/api/v1/server" },
     ],
     system: { systemctl: "/bin/true", idnDir },
+    github: { api: `http://127.0.0.1:${gh.address().port}`, repository: "example/vesper" },
   }),
 );
 const launcher = spawn(join(TARGET, "debug/vesper-launcher"), ["--config", join(dir, "launcher.json")], { stdio: ["ignore", "ignore", "inherit"] });
@@ -166,9 +183,14 @@ try {
   await fetch(base + "launcher/v1/setup", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ roles: ["display"] }) });
   await page.waitForSelector(".rolesteps .failed", { timeout: 10000 });
   await shot("9-roles-display-needs-node");
+  // Add app: what this display box can run and doesn't have, from GitHub and the site's server.
+  await page.click('[data-act="add-open"]');
+  await page.waitForSelector('[data-act="add-install"]', { timeout: 10000 });
+  await shot("10-add-app");
 } finally {
   await browser.close();
   launcher.kill();
   site.close();
   product.close();
+  gh.close();
 }

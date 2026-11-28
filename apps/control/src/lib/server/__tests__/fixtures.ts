@@ -33,7 +33,7 @@ export function showState(over: Partial<ShowState> = {}): ShowState {
     clockFormat: { use24Hour: false, seconds: false },
     displays: [],
     build: null,
-    captions: { enabled: false, status: "off", detail: null, progress: null, downloaded: null, downloadSize: null, model: null, device: null, load: null, lines: [] },
+    captions: { enabled: false, status: "off", detail: null, progress: null, downloaded: null, downloadSize: null, model: null, device: null, gpu: null, note: null, load: null, lines: [] },
     ...over,
   };
 }

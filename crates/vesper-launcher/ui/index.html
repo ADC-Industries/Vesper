@@ -172,6 +172,7 @@ async function lookForServers() {
   if (view === "wizard" && wiz.step === 2) render();
 }
 let logs = { product: "", text: "" };
+let add = { list: null, error: "", busy: "", done: "" };   // "Add app": the catalogue
 const busy = {};          // product → what is under way from this window
 let note = "";            // a problem to show on the main view
 
@@ -194,6 +195,7 @@ function render() {
   const el = document.getElementById("app");
   if (view === "logs") { el.innerHTML = logsView(); return; }
   if (view === "diagnostics") { el.innerHTML = diagView(); return; }
+  if (view === "add") { el.innerHTML = addView(); return; }
   if (!ov) { el.innerHTML = `<main><div class="empty">${esc(note || "Starting…")}</div></main>`; return; }
   const focus = document.activeElement?.id;   // keep what is being typed
   el.innerHTML = view === "wizard" ? wizardView() : mainView();
@@ -205,6 +207,17 @@ function head(sub) {
   const light = ov?.light ?? "";
   return `<header><span class="light ${esc(light)}" title="${esc(LIGHT[light] ?? "")}"></span>
     <div class="grow"><h1>Vesper Launcher</h1><div class="sub">${sub}</div></div></header>`;
+}
+
+// Checking GitHub itself (no church server, or none reachable for a long time).
+function githubLine() {
+  const g = ov.github;
+  if (!g?.direct) return "";
+  const st = g.status;
+  const when = st.lastSuccess ? " · checked " + new Date(st.lastSuccess).toLocaleString() : "";
+  const s = st.error ? "Can't check GitHub: " + esc(st.error) : st.checking ? "Checking now…" : "New versions come straight from Vesper's releases" + esc(when);
+  return `<div class="card site"><div class="txt"><div class="t">Updates from GitHub · ${esc(st.settings.repository)} (${st.settings.channel === "beta" ? "beta" : "stable"})</div>
+    <div class="s ${st.error ? "problem" : ""}">${s}</div></div></div>`;
 }
 
 function siteLine() {
@@ -274,11 +287,11 @@ function mainView() {
   const s = ov.status;
   const roles = ov.setup.roles.map((r) => ov.setup.availableRoles.find((x) => x.id === r)?.name ?? r);
   return head(`${esc(s.machineName)} · ${esc(roles.join(", ") || "no role chosen")}`) +
-    `<main>${note ? `<div class="err">${esc(note)}</div>` : ""}${siteLine()}${rolesCard()}
+    `<main>${note ? `<div class="err">${esc(note)}</div>` : ""}${siteLine()}${githubLine()}${rolesCard()}
       <div class="label">Products on this machine</div>
       ${s.products.length ? s.products.map(productCard).join("") : `<div class="empty">No products are set up on this machine.</div>`}
     </main>
-    <footer><button class="link" data-act="wizard">Set up this machine</button><button class="link" data-act="diagnostics">Diagnostics</button><span class="grow"></span><span>Launcher ${esc(s.launcherVersion)}</span></footer>`;
+    <footer><button class="link" data-act="wizard">Set up this machine</button><button class="link" data-act="add-open">Add app</button><button class="link" data-act="diagnostics">Diagnostics</button><span class="grow"></span><span>Launcher ${esc(s.launcherVersion)}</span></footer>`;
 }
 
 async function runDiagnostics() {
@@ -324,6 +337,39 @@ async function copyReport() {
     document.execCommand("copy"); t.remove();
   }
   diag.copied = true; render();
+}
+
+const SOURCE = { channel: "the site's server", github: "GitHub" };
+
+// "Add app": what this machine can run and doesn't have, from the site's server or GitHub.
+function addView() {
+  const top = `<header><span class="light ${esc(ov?.light ?? "")}"></span><div class="grow"><h1>Add app</h1>
+    <div class="sub">${esc(ov?.status.machineName ?? "")} · ${esc(ov?.status.platform ?? "")}</div></div>
+    <button class="btn" data-act="add-close">Close</button></header>`;
+  let body;
+  if (add.list === null) body = add.error ? `<div class="err">${esc(add.error)}</div>` : `<div class="wait"><div class="spinner"></div><p>Looking for apps…</p></div>`;
+  else if (!add.list.length) body = `<div class="empty">Nothing more to add: this machine has every app it can run.</div>`;
+  else body = (add.error ? `<div class="err">${esc(add.error)}</div>` : "") + (add.done ? `<div class="card site"><div class="txt"><div class="t">${esc(add.done)}</div></div></div>` : "") +
+    add.list.map((c) => {
+      const v = c.stable ?? c.beta;
+      const from = c.sources.map((s) => SOURCE[s] ?? s).join(" or ");
+      const doing = add.busy === c.product;
+      return `<div class="card product" data-product="${esc(c.product)}" data-version="${esc(v)}">
+        <div class="top"><div class="name">${esc(c.name)}</div>${doing ? `<span class="chip busy">Installing</span>` : ""}</div>
+        <div class="meta">Version ${esc(v)}${c.stable && c.beta ? ` · beta ${esc(c.beta)}` : !c.stable ? " (beta)" : ""} · from ${esc(from)}</div>
+        <div class="actions"><button class="btn primary" data-act="add-install" ${add.busy ? "disabled" : ""}>Add</button></div></div>`;
+    }).join("");
+  return `<div class="app">${top}<main><div class="label">Apps this machine can run</div>${body}
+    <div class="meta" style="margin-top:8px;color:var(--text-2)">Every app is checked against Vesper's signing keys before it is installed.</div></main></div>`;
+}
+
+async function loadCatalogue(clear = true) {
+  add.list = null;
+  if (clear) add.error = "";
+  render();
+  try { add.list = (await api("GET", "/catalogue")).products; }
+  catch (e) { add.error = e.message; add.list = null; }
+  if (view === "add") render();
 }
 
 function logsView() {
@@ -452,6 +498,20 @@ document.addEventListener("click", async (e) => {
       return;
     }
     else if (act === "logs-close") { view = "main"; }
+    else if (act === "add-open") { view = "add"; add.done = ""; await loadCatalogue(); return; }
+    else if (act === "add-close") { view = "main"; }
+    else if (act === "add-install") {
+      const version = b.closest("[data-version]")?.dataset.version;
+      add.busy = product; add.error = ""; add.done = ""; render();
+      try {
+        const o = await api("POST", "/actions", { type: "install", product, version });
+        if (o.result === "installed") { add.done = `Added ${add.list.find((c) => c.product === product)?.name ?? product} ${version}`; }
+        else add.error = o.message;
+      } catch (err) { add.error = err.message; }
+      finally { add.busy = ""; }
+      await loadCatalogue(false);
+      return;
+    }
     else if (act === "diagnostics") { view = "diagnostics"; history.replaceState(null, "", "#diagnostics"); diag.data = null; runDiagnostics(); return; }
     else if (act === "diag-run") { runDiagnostics(); return; }
     else if (act === "diag-copy") { await copyReport(); return; }
@@ -463,7 +523,7 @@ document.addEventListener("click", async (e) => {
 });
 
 refresh();
-setInterval(() => { if (view !== "logs" && view !== "diagnostics" && !wiz.busy) refresh(); }, 2000);
+setInterval(() => { if (view !== "logs" && view !== "diagnostics" && view !== "add" && !wiz.busy) refresh(); }, 2000);
 // The tray's "Diagnostics" opens the window at #diagnostics.
 addEventListener("hashchange", () => {
   if (location.hash === "#diagnostics" && view !== "diagnostics") { view = "diagnostics"; diag.data = null; runDiagnostics(); }

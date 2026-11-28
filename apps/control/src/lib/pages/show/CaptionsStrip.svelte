@@ -52,7 +52,7 @@
       >
         <Captions size={14} aria-hidden="true" /><span>Captions</span>
       </button>
-      <span class="what {status.cls}" title={$captions.device ? `${status.text} · ${$captions.device}` : status.text}>{status.text}</span>
+      <span class="what {status.cls}" title={[status.text, $captions.device, $captions.note].filter(Boolean).join(" · ")}>{status.text}</span>
       {#if on && $captions.lines.length}
         <button class="x" onclick={() => session.run({ type: "clearLayer", layer: "captions" })} title="Take the lines off the screens (captions keep running)" aria-label="Clear captions"><X size={13} /></button>
       {/if}

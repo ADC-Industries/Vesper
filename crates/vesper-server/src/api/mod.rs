@@ -51,6 +51,7 @@
 //! | `/api/v1/codex/...` | Vesper Codex: status, collections, this box's assignment (see [`crate::codex::api`]) |
 //! | `GET /api/v1/streaming`, `PUT …/recording`, `POST …/targets`, `PUT/DELETE …/targets/{id}`, `POST …/targets/{id}/start`, `…/stop`; `GET /api/v1/streaming/status`; `POST /api/v1/recording/start`, `/stop`, `/split` | recording and streaming a screen ([`crate::gateways`]) |
 //! | `POST /api/v1/chordpro/parse`, `GET /api/v1/presentations/{id}/chordpro` | ChordPro → a new presentation; a presentation as ChordPro ([`chordpro`]) |
+//! | `POST /api/v1/songselect/parse` | a SongSelect file (lyrics `.txt`, `.usr`, ChordPro) or pasted SongSelect lyrics → a new presentation with its song metadata ([`songselect`]) |
 //! | `/api/v1/scripture/...` | Bible translations, references, passages, search ([`vesper_scripture::api`]); slides, previews and presentations from a passage ([`scripture`]) |
 //!
 //! Every route except the first two needs a trusted local request or a paired token
@@ -80,6 +81,7 @@ mod scripture;
 mod server;
 mod show;
 mod signage;
+mod songselect;
 mod sources;
 mod stage;
 mod streaming;
@@ -271,6 +273,7 @@ pub fn router(app: AppState) -> Router {
         .merge(reports::routes())
         .merge(chordpro::routes())
         .merge(translate::routes())
+        .merge(songselect::routes())
         .fallback(not_found_route)
         // A show box forwards content writes to the site's Codex (write-through).
         .layer(middleware::from_fn_with_state(

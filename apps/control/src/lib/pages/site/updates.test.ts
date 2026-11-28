@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LauncherEntry, LauncherProduct } from "$protocol";
-import { attentionCount, byProduct, bytes, productName, roleLabel, canAct, healthLine, outcomeText, pendingFor, platformLabel, seenAgo, stateLabel, stateTone, updateFor } from "./updates";
+import { addVersion, attentionCount, byProduct, bytes, githubLine, packageSource, productName, queuedAdds, roleLabel, canAct, healthLine, outcomeText, pendingFor, platformLabel, seenAgo, sourcesText, stateLabel, stateTone, updateFor } from "./updates";
 
 const product = (p: Partial<LauncherProduct> = {}): LauncherProduct => ({ product: "vesper", name: "Vesper", version: "0.1.0", state: "running", restarts: 0, ...p });
 const entry = (e: Partial<LauncherEntry> = {}, p: Partial<LauncherProduct> = {}): LauncherEntry => ({
@@ -65,5 +65,25 @@ describe("Site ▸ Updates words", () => {
       ["vesper", 2],
       ["oriel", 1],
     ]);
+  });
+
+  it("words Add app and the GitHub check", () => {
+    const e = entry({ pending: [{ type: "install", product: "vesper-oriel", version: "0.2.0" }] });
+    expect(queuedAdds(e)).toEqual(["Adding Vesper Oriel 0.2.0 (queued)"]);
+    expect(pendingFor(e, "vesper-oriel")).toBe("Adding 0.2.0 queued");
+    expect(productName("vesper-idn-node")).toBe("IDN Node (bundled)");
+    const c = { product: "vesper", name: "Vesper", beta: "0.3.0-beta1", platforms: ["linux-x86_64"], sources: ["channel", "github"] };
+    expect(addVersion(c)).toBe("0.3.0-beta1");
+    expect(addVersion({ ...c, stable: "0.2.0" })).toBe("0.2.0");
+    expect(sourcesText(c)).toBe("the update channel or GitHub");
+    const p = { id: "1", product: "vesper", version: "0.2.0", platform: "linux-x86_64", fileName: "f", size: 1, sha256: "", keyId: "K", trustedComment: "", uploadedAt: "" };
+    expect(packageSource(p)).toBe("Uploaded");
+    expect(packageSource({ ...p, source: "github" })).toBe("GitHub");
+    const settings = { enabled: true, repository: "example/vesper", channel: "stable" as const, intervalHours: 6 };
+    const when = (iso: string) => iso.slice(11, 16);
+    expect(githubLine({ settings, added: [], checking: false }, when)).toBe("Not checked yet");
+    expect(githubLine({ settings, added: [], checking: false, lastCheck: "2026-11-27T10:02:00Z", lastSuccess: "2026-11-27T10:02:00Z", nextCheck: "2026-11-27T16:02:00Z" }, when)).toBe("Last checked 10:02 · next 16:02");
+    expect(githubLine({ settings, added: [], checking: true }, when)).toBe("Checking GitHub now…");
+    expect(githubLine({ settings: { ...settings, enabled: false }, added: [], checking: false }, when)).toBe("Off: new releases aren't looked for.");
   });
 });

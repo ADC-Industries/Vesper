@@ -3,6 +3,8 @@
 import type {
   ChordProParse,
   ChordProParsed,
+  SongSelectParse,
+  SongSelectParsed,
   RemoteCompatStatus,
   UpdateRemoteCompat,
   ServerDetails,
@@ -481,6 +483,8 @@ export class RestClient {
     this.request<StageLayoutEntry>("PUT", `/stage-layouts/${doc.id}`, withoutRevision(doc), undefined, { ifMatch: revision });
   /** ChordPro → a new, unsaved presentation (batch 16). */
   parseChordPro = (body: ChordProParse) => this.request<ChordProParsed>("POST", "/chordpro/parse", body);
+  /** A SongSelect file or pasted SongSelect lyrics → a new, unsaved presentation with its song metadata. */
+  parseSongSelect = (body: SongSelectParse) => this.request<SongSelectParsed>("POST", "/songselect/parse", body);
   /** A presentation as a ChordPro file (download URL, token in the query). */
   chordProUrl(presentation: string): string {
     return this.url(`/presentations/${presentation}/chordpro`, {}, true);

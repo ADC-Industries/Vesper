@@ -287,6 +287,9 @@ async fn run() -> anyhow::Result<()> {
         .collect::<anyhow::Result<Vec<_>>>()?;
     let config = ServerConfig {
         update_keys,
+        // Vesper's releases on GitHub for the site's update channel (off in Site ▸ Updates).
+        github_api: Some(vesper_releases::github::DEFAULT_API.to_string()),
+        github_tick: std::time::Duration::from_secs(60),
         data_dir: a.data.unwrap_or_else(default_data_dir),
         listen: a.listen,
         dev: DevOutputs {

@@ -65,6 +65,7 @@ pub mod playlist;
 pub mod presentation;
 pub mod show;
 pub mod slide;
+pub mod songselect;
 pub mod template;
 pub mod text;
 pub mod theme;
