@@ -101,7 +101,7 @@ recording's encoder, never receivers).
    never in the server; the server never calls `idn_captions::gpus()`. The device is chosen by
    the worker (`EngineConfig::gpu`: the best GPU, a card of its own first) and reported as
    `Engine::device` (the GPU's name, or "CPU (N threads)"), shown in the settings as "In use".
-   IDN's public API (Beta18) can't pick a particular GPU (`EngineConfig::gpu` is on/off; `Gpu`'s
+   IDN's public API (Beta21) can't pick a particular GPU (`EngineConfig::gpu` is on/off; `Gpu`'s
    `index` is only reported), so "a second card for captions" can't be chosen here; the renderer
    too prefers a card of its own, so on a box with one card both use it.
    - **Fallback, never a stop:** a GPU that can't load the model (no memory, a driver error) is
@@ -144,7 +144,12 @@ recording's encoder, never receivers).
    and the engine tries again after 5 s, 30 s, 60 s, then every 5 minutes; a step that fails
    (a pass over IDN's 120 s timeout is skipped, a worker that ended is started again by IDN
    after 1 s, 5 s, 30 s, then every minute) shows as the status's error until a step works
-   again. Neither stops the server or the show. whisper runs in the server's process only when
+   again. While there's no sound to step with (no source, or a network source that sends
+   nothing) the engine calls `Engine::tend()` each half second instead (IDN Beta21), so a
+   worker that ended starts again on that schedule then too, not only once sound comes. A
+   step runs as `Engine::step_stop` with the worker's stop flag: a stop or a settings change
+   ends a pass under way (IDN kills a worker's pass that doesn't end within a second) instead
+   of waiting for it. Neither stops the server or the show. whisper runs in the server's process only when
    no worker program starts and says IDN's hello (logged once; with the GPU it would then open
    Vulkan in the server, so the worker is what makes GPU captions safe).
    *The IDN maintainers' guidance (2026-11-25), for when GPU captions are taken up:* ggml's Vulkan
@@ -195,6 +200,13 @@ captions box under the layout), GPU whisper on Windows, a captions history / tra
   child (with `VESPER_TEST_WHISPER_DIR`); a worker that can't load its model (a damaged file,
   always run) leaves the server running, shows the error, tries again and leaves no worker
   behind when captions turn off.
+- [x] IDN v0.3.8-Beta21: `Engine::tend()` while there's no sound (a dead worker restarts on
+  time in silence), `Engine::step_stop` (a stop never waits for a pass). The CPU device label
+  now counts the threads a pass uses ("CPU (8 threads)" on a 16-thread box, was the machine's
+  count): the settings show it as it comes, and since IDN keys `auto`'s measurement on that
+  label, the first start after the update measures the box once more. Test (with
+  `VESPER_TEST_WHISPER_DIR`): a worker killed while its network source sends nothing is started
+  again.
 - [x] GPU captions (lane G, IDN Beta18): IDN's `gpu` feature built on Linux; `processor` (CPU
   default, GPU) in the settings with what is in use, a GPU failure falling back to the CPU with
   a note. Measured: the CPU at the lowest priority keeps frames on time; the GPU shared with the

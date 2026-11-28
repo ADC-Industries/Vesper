@@ -194,8 +194,8 @@ pub fn template(product: &str, platform: &str) -> Option<ProductConfig> {
 /// products `have` installed: a product it has no package for, that it already has, the
 /// Launcher itself and its tray (they come with the Launcher), the Vesper server on a display
 /// box (a display box runs no Vesper server), and what the Launcher can't install there
-/// ([`template`]: Oriel's Windows installer is per user, the Launcher runs as SYSTEM) are
-/// left out.
+/// ([`template`]: Oriel on Windows, a program with no health check whose installed version
+/// the Launcher can't read yet) are left out.
 pub fn offered(
     cat: &[CatalogueProduct],
     platform: &str,

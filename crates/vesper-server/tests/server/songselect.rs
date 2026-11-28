@@ -6,7 +6,7 @@
 use crate::common::*;
 use base64::Engine as _;
 use model::Presentation;
-use serde_json::json;
+use serde_json::{Value, json};
 
 const LYRICS: &str = "Lanterns Over Kettle Bay\r
 \r
@@ -150,4 +150,114 @@ async fn songselect_files_and_pasted_lyrics() {
         let r = parse(body).await;
         assert_eq!(r.status, 400, "{}", String::from_utf8_lossy(&r.body));
     }
+}
+
+/// Settings ▸ CCLI (`GET`/`PUT /settings/ccli`): the licence number, the line on or off and its
+/// slides are saved in the show settings (kept across a restart, the line's layout kept); a
+/// SongSelect file's licence number is offered once one was read; bad values and a client
+/// that isn't an admin are refused.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn ccli_settings_and_the_licence_number_imported_songs_carry() {
+    let fx = fixture("ccli-settings");
+    let server = start_with_site(&fx, true, vesper_server::site::SiteConfig::loopback()).await;
+    let addr = server.addr;
+    let s = get_json(addr, "/api/v1/settings/ccli").await;
+    assert_eq!(s["settings"]["enabled"], false, "{s}");
+    assert!(s.get("importedLicense").is_none(), "{s}");
+
+    // A SongSelect file carrying `CCLI License # 7654321`: offered from then on.
+    let r = http(
+        addr,
+        "POST",
+        "/api/v1/songselect/parse",
+        &[],
+        Some(json!({"text": LYRICS})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.body));
+    let mut offered = Value::Null;
+    for _ in 0..50 {
+        offered = get_json(addr, "/api/v1/settings/ccli").await;
+        if offered.get("importedLicense").is_some() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    assert_eq!(offered["importedLicense"], "7654321", "{offered}");
+
+    let put = |body: Value| http(addr, "PUT", "/api/v1/settings/ccli", &[], Some(body));
+    let r =
+        put(json!({"licenseNumber": " 1112223 ", "enabled": true, "showOn": "firstAndLast"})).await;
+    assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.body));
+    let s = r.json();
+    assert_eq!(s["settings"]["licenseNumber"], "1112223");
+    assert_eq!(s["settings"]["showOn"], "firstAndLast");
+    assert_eq!(s["settings"]["enabled"], true);
+    for bad in [
+        json!({"licenseNumber": "1".repeat(41), "enabled": true}),
+        json!({"licenseNumber": "12\n34", "enabled": true}),
+        json!({"enabled": true, "showOn": "sometimes"}),
+    ] {
+        let r = put(bad.clone()).await;
+        assert_eq!(r.status, 400, "{bad}: {}", String::from_utf8_lossy(&r.body));
+    }
+
+    // A locked client (access `pin`) is no admin.
+    let r = http(
+        addr,
+        "POST",
+        "/api/v1/pair",
+        &[],
+        Some(json!({"code": server.pairing_code(), "clientName": "Stage tablet"})),
+    )
+    .await;
+    assert_eq!(r.status, 200);
+    let key = r.json()["token"].as_str().unwrap().to_string();
+    let bearer = format!("Bearer {key}");
+    let r = http(
+        addr,
+        "PUT",
+        "/api/v1/site/settings",
+        &[],
+        Some(json!({"enabled": true, "joinMode": "code_or_approval", "access": "pin", "pin": "2468"})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.body));
+    let r = http(
+        addr,
+        "PUT",
+        "/api/v1/settings/ccli",
+        &[("Authorization", bearer.as_str())],
+        Some(json!({"enabled": false})),
+    )
+    .await;
+    assert_eq!(r.status, 403, "{}", String::from_utf8_lossy(&r.body));
+    let r = http(
+        addr,
+        "GET",
+        "/api/v1/settings/ccli",
+        &[("Authorization", bearer.as_str())],
+        None,
+    )
+    .await;
+    assert_eq!(r.status, 200, "anyone reads them");
+    server.shutdown().await.unwrap();
+
+    // Kept across a restart; an empty number clears it.
+    let server = start_server(&fx, true, false).await;
+    let addr = server.addr;
+    let s = get_json(addr, "/api/v1/settings/ccli").await;
+    assert_eq!(s["settings"]["licenseNumber"], "1112223", "{s}");
+    assert_eq!(s["settings"]["showOn"], "firstAndLast");
+    let r = http(
+        addr,
+        "PUT",
+        "/api/v1/settings/ccli",
+        &[],
+        Some(json!({"licenseNumber": "  ", "enabled": true, "showOn": "allSlides"})),
+    )
+    .await;
+    assert_eq!(r.status, 200, "{}", String::from_utf8_lossy(&r.body));
+    assert!(r.json()["settings"].get("licenseNumber").is_none());
+    server.shutdown().await.unwrap();
 }

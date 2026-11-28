@@ -417,6 +417,26 @@ impl Hub {
         self.set_status(CaptionsStatus::Error, Some(why));
     }
 
+    /// Where whisper runs now (`Engine::device`), as the worker says after a step or a tend:
+    /// a worker started again may run elsewhere (IDN: on the CPU after one that ended loading
+    /// the model on the GPU). Announced when it moved.
+    fn worker_device(&self, device: &str) {
+        let mut s = lock(&self.status);
+        if s.device.as_deref() == Some(device) {
+            return;
+        }
+        if s.gpu == Some(true) && !is_gpu(device) {
+            let n = "whisper's GPU worker ended: captions run on the CPU until they are switched \
+                     off and on again or the settings change";
+            tracing::warn!("captions: {n}");
+            s.note = Some(n.into());
+        }
+        s.device = Some(device.to_string());
+        s.gpu = Some(is_gpu(device));
+        drop(s);
+        self.changed.notify_one();
+    }
+
     /// A caption line: from the engine or another captioner. A draft replaces the draft
     /// before it (an empty one takes it down); a final line ends it.
     pub fn line(&self, text: &str, is_final: bool) {
@@ -918,10 +938,19 @@ fn worker_main(
             (g.rate, std::mem::take(&mut g.samples))
         };
         if rate == 0 || samples.is_empty() {
+            // No sound to step with (no source, or one that sends nothing): IDN's worker is
+            // still looked after, so one that ended starts again on its schedule (IDN Beta21).
+            engine.tend();
+            if failing.is_none() {
+                report(&|h| h.worker_device(&engine.device));
+            }
             continue;
         }
         engine.push(&samples, rate);
-        match engine.step() {
+        // A pass under way ends at the stop (IDN Beta21: a worker's pass is killed if it doesn't
+        // end within a second), so a stop or a settings change never waits for a long pass.
+        match engine.step_stop(&stop) {
+            Err(e) if e == idn_captions::STOPPED => break,
             Ok(lines) => {
                 let load = (engine.load * 100.0).round() / 100.0;
                 let recovered = failing.take().is_some();
@@ -933,27 +962,17 @@ fn worker_main(
                         h.line(&l.text, l.is_final);
                     }
                     let mut s = lock(&h.status);
-                    // A worker started again may run elsewhere (IDN: on the CPU after one
-                    // that ended loading the model on the GPU).
-                    let moved = s.device.as_deref() != Some(engine.device.as_str());
-                    let changed = recovered || moved || s.load != Some(load);
+                    let changed = recovered || s.load != Some(load);
                     if recovered {
                         s.status = CaptionsStatus::Running;
                         s.detail = None;
                     }
-                    if moved && s.gpu == Some(true) && !is_gpu(&engine.device) {
-                        let n = "whisper's GPU worker ended: captions run on the CPU until they \
-                                 are switched off and on again or the settings change";
-                        tracing::warn!("captions: {n}");
-                        s.note = Some(n.into());
-                    }
                     s.load = Some(load);
-                    s.device = Some(engine.device.clone());
-                    s.gpu = Some(is_gpu(&engine.device));
                     drop(s);
                     if changed {
                         h.changed.notify_one();
                     }
+                    h.worker_device(&engine.device);
                 });
             }
             // IDN keeps the engine going: a pass too slow is skipped, a worker that ended is

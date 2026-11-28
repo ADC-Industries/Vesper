@@ -26,6 +26,8 @@
   import MessageDialog from "../pages/show/MessageDialog.svelte";
   import ChordProDialog from "../components/ChordProDialog.svelte";
   import SongSelectDialog from "../components/SongSelectDialog.svelte";
+  import SongSelectDownloadNotice from "../components/SongSelectDownloadNotice.svelte";
+  import { songSelectWatch } from "../state/songselectWatch.svelte";
   import ShowPage from "../pages/show/ShowPage.svelte";
   // The slide editor (canvas, inspector panels, transitions) loads on first use too; the
   // Library's song editing shares its chunk.
@@ -50,7 +52,10 @@
   const status = conn.status;
   const desktop = isTauri();
 
-  onMount(() => shell.initRouting());
+  onMount(() => {
+    songSelectWatch.start();
+    return shell.initRouting();
+  });
 
   function onKeydown(e: KeyboardEvent) {
     if (shell.menuOpen) return;
@@ -120,6 +125,7 @@
     {/if}
   </main>
   <Toasts {conn} />
+  <SongSelectDownloadNotice />
   {#if shell.showHelp}<ShortcutHelp />{/if}
   {#if shell.showDiagnostics}<DiagnosticsPanel {conn} />{/if}
   {#if shell.showLive}

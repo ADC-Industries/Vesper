@@ -9,6 +9,9 @@
 //!
 //! The log is `reports/ccli-usage.jsonl` in the box's data folder, append-only: a use is written
 //! when it starts and again when one of its flags turns on; readers merge the lines of a use.
+//!
+//! Beside it, `reports/ccli-imported-license.txt` keeps the church's licence number the
+//! SongSelect files read last carried (`CCLI License # …`), for Settings ▸ CCLI to offer.
 
 use model::{Presentation, PresentationId};
 use protocol::{CcliReport, CcliReportRow, CcliUse};
@@ -39,9 +42,14 @@ pub struct Live<'a> {
     pub recorded: bool,
 }
 
+/// The longest licence number kept (characters).
+pub const MAX_LICENSE: usize = 40;
+
 /// The usage log of a box.
 pub struct CcliLog {
     path: PathBuf,
+    /// `reports/ccli-imported-license.txt`.
+    imported: PathBuf,
     /// Uses logged (merged), loaded on first use.
     uses: Mutex<Option<HashMap<Key, CcliUse>>>,
 }
@@ -89,7 +97,36 @@ impl CcliLog {
     pub fn new(data_dir: &Path) -> CcliLog {
         CcliLog {
             path: data_dir.join("reports").join("ccli-usage.jsonl"),
+            imported: data_dir.join("reports").join("ccli-imported-license.txt"),
             uses: Mutex::new(None),
+        }
+    }
+
+    /// The licence number the SongSelect files read last carried, if any (blocking).
+    pub fn imported_license(&self) -> Option<String> {
+        let t = std::fs::read_to_string(&self.imported).ok()?;
+        let t = t.trim();
+        (!t.is_empty() && t.chars().count() <= MAX_LICENSE).then(|| t.to_string())
+    }
+
+    /// Keeps `license`, the licence number a SongSelect file carries (blocking; written only
+    /// when it changes; a failure is logged).
+    pub fn note_imported_license(&self, license: &str) {
+        let license = license.trim();
+        if license.is_empty()
+            || license.chars().count() > MAX_LICENSE
+            || license.chars().any(char::is_control)
+            || self.imported_license().as_deref() == Some(license)
+        {
+            return;
+        }
+        let written = self
+            .imported
+            .parent()
+            .map_or(Ok(()), std::fs::create_dir_all)
+            .and_then(|()| std::fs::write(&self.imported, format!("{license}\n")));
+        if let Err(e) = written {
+            tracing::warn!("the imported CCLI licence number isn't kept: {e}");
         }
     }
 

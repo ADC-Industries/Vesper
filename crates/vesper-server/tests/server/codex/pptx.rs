@@ -85,10 +85,12 @@ fn deck() -> Vec<u8> {
     })
 }
 
+#[cfg(unix)]
 fn near(p: &image::Rgb<u8>, c: [u8; 3]) -> bool {
     (0..3).all(|k| (p.0[k] as i32 - c[k] as i32).abs() <= 24)
 }
 
+#[cfg(unix)]
 async fn thumbnail(addr: std::net::SocketAddr, pres: &str, slide: &str) -> image::RgbImage {
     let r = http(
         addr,

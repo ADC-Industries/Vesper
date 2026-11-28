@@ -807,6 +807,22 @@ impl ShowData {
         }
     }
 
+    /// A copy with new show settings; their fingerprint follows. `content_generation` is new,
+    /// so every screen re-renders (the CCLI line, default transitions).
+    pub fn with_settings(&self, settings: ShowSettings) -> ShowData {
+        let mut hashes = self.hashes.clone();
+        hashes.insert(
+            (DocumentKind::ShowSettings, uuid::Uuid::nil()),
+            doc_hash(&settings),
+        );
+        ShowData {
+            settings: Arc::new(settings),
+            hashes,
+            content_generation: next_generation(),
+            ..self.clone()
+        }
+    }
+
     /// A copy with collection content changed (edits and CRUD), see
     /// [`CollectionContent::with_change`]. `content_generation` is new, so every screen
     /// re-renders against the edited documents.

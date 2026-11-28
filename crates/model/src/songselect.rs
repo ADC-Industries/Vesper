@@ -641,6 +641,37 @@ pub fn parse(text: &str, format: Format) -> ChordProSong {
     }
 }
 
+/// A file recognised as a SongSelect song ([`recognise`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Recognised {
+    /// How it is written.
+    pub format: Format,
+    /// The song's title, if the file has one.
+    pub title: Option<String>,
+}
+
+/// Whether a file's bytes are a SongSelect song, by content only (never the file's name: a
+/// download folder has every kind of file): words in sections, and SongSelect's marks (a CCLI
+/// song number, the church's licence number or the SongSelect terms line). Lyrics `.txt`,
+/// SongShow Plus `.usr` / `.bin` and ChordPro with SongSelect's metadata are; a plain text,
+/// a ChordPro song without a CCLI number or a file over [`MAX_FILE_BYTES`] is not.
+pub fn recognise(bytes: &[u8]) -> Option<Recognised> {
+    if bytes.is_empty() || bytes.len() > MAX_FILE_BYTES {
+        return None;
+    }
+    let text = decode(bytes);
+    let format = sniff(&text, None);
+    let song = parse(&text, format);
+    if song.sections.is_empty() {
+        return None;
+    }
+    let marked = song.ccli.is_some() || song.license.is_some() || looks_like_lyrics(&text);
+    marked.then(|| Recognised {
+        format,
+        title: song.title.filter(|t| !t.trim().is_empty()),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -867,5 +898,43 @@ Words=Lanterns over Kettle Bay/nCalling every sleeper home/tRise and sing the ha
             authors("Smith, Alex | Doe, Jamie").as_deref(),
             Some("Smith, Alex; Doe, Jamie")
         );
+    }
+
+    /// Downloads recognised by content, whatever their names: lyrics (UTF-8 and UTF-16),
+    /// SongShow Plus, ChordPro with SongSelect's number; not other files.
+    #[test]
+    fn songselect_files_are_recognised_by_content() {
+        let r = recognise(NEW.as_bytes()).unwrap();
+        assert_eq!(
+            (r.format, r.title.as_deref()),
+            (Format::Lyrics, Some("Lanterns Over Kettle Bay"))
+        );
+        let utf16: Vec<u8> = [0xFF, 0xFE]
+            .into_iter()
+            .chain(NEW.encode_utf16().flat_map(u16::to_le_bytes))
+            .collect();
+        assert_eq!(recognise(&utf16).unwrap().format, Format::Lyrics);
+        let r = recognise(USR.as_bytes()).unwrap();
+        assert_eq!(
+            (r.format, r.title.as_deref()),
+            (Format::Usr, Some("Lanterns Over Kettle Bay"))
+        );
+        let cho = "{title: Paper Boats}\n{ccli: 7000001}\n\n{start_of_verse}\n[D]Paper boats upon the stream\n{end_of_verse}\n";
+        let r = recognise(cho.as_bytes()).unwrap();
+        assert_eq!(
+            (r.format, r.title.as_deref()),
+            (Format::ChordPro, Some("Paper Boats"))
+        );
+
+        // Not SongSelect songs: a plain note, ChordPro without SongSelect's number, a terms
+        // line with no words, binary data, nothing, too much.
+        assert!(recognise(b"Shopping list\n\nMilk\nBread\n").is_none());
+        assert!(recognise(b"{title: Paper Boats}\n[D]Paper boats upon the stream\n").is_none());
+        assert!(recognise(b"CCLI Song # 1234567\n").is_none());
+        let junk: Vec<u8> = (0..=255u8).cycle().take(4096).collect();
+        assert!(recognise(&junk).is_none());
+        assert!(recognise(b"").is_none());
+        let big = NEW.repeat(MAX_FILE_BYTES / NEW.len() + 1);
+        assert!(recognise(big.as_bytes()).is_none());
     }
 }

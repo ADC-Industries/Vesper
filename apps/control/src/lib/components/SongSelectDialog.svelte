@@ -158,9 +158,20 @@
     }
   }
 
-  // Opened with pasted lyrics (Reflow's smart paste): preview them at once.
+  /** Files handed over (the SongSelect Downloads watcher's notice): read like picked ones. */
+  async function addData(list: { name: string; data: string }[]) {
+    mode = "files";
+    for (const f of list) {
+      const key = `f${++seq}`;
+      const r = await read({ data: f.data, fileName: f.name });
+      files = [...files, { ...itemFor(key, f.name, r.parsed, r.error), data: f.data }];
+    }
+  }
+
+  // Opened with pasted lyrics (Reflow's smart paste) or a downloaded file: preview at once.
   onMount(() => {
     if (text.trim()) void readPaste();
+    if (req.files?.length) void addData(req.files);
   });
 
   function onDrop(e: DragEvent) {
@@ -247,7 +258,7 @@
         </tbody>
       </table>
     {/if}
-    {#if licence}<p class="muted">{mode === "files" ? "The files carry" : "The text carries"} CCLI Licence # {licence}. The copyright line under the words uses the licence number in the show's CCLI settings.</p>{/if}
+    {#if licence}<p class="muted">{mode === "files" ? "The files carry" : "The text carries"} CCLI Licence # {licence}. The copyright line under the words uses the licence number in Settings ▸ CCLI.</p>{/if}
     {#if error}<p class="err" role="alert">{error}</p>{/if}
   </div>
   {#snippet footer()}

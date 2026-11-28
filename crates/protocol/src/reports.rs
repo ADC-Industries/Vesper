@@ -81,3 +81,35 @@ pub struct CcliReport {
     /// Every use in the range, oldest first.
     pub uses: Vec<CcliUse>,
 }
+
+/// Settings ▸ CCLI: the church's CCLI licence and where the copyright line shows (`GET` /
+/// `PUT /api/v1/settings/ccli`, the change for admins). The show settings' `ccli` part; the
+/// line's layout and template are kept as they are.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct CcliLicense {
+    /// The church's CCLI licence number, verbatim (trimmed; at most 40 characters; none when
+    /// empty).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub license_number: Option<String>,
+    /// The copyright line under a song's words (a song with song metadata that shows it).
+    #[serde(default)]
+    pub enabled: bool,
+    /// On which of a song's slides, counted in its play order.
+    #[serde(default)]
+    pub show_on: model::CcliDisplay,
+}
+
+/// `GET /api/v1/settings/ccli` (and the answer to `PUT`).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct CcliLicenseStatus {
+    /// The settings.
+    pub settings: CcliLicense,
+    /// The licence number the SongSelect files read last carried (`CCLI License # …`), if any:
+    /// Oriel offers it while no number is set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub imported_license: Option<String>,
+}

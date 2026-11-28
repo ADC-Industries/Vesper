@@ -72,7 +72,7 @@ function initial() {
       lastCheck: at(42),
       lastSuccess: at(42),
       nextCheck: new Date(NOW + 318 * 60_000).toISOString(),
-      added: ["vesper 0.2.0 for linux-x86_64"],
+      added: ["vesper 0.2.0 for linux-x86_64", "vesper-idn-node 0.3.8 for linux-x86_64"],
       checking: false,
     },
     packages: [
@@ -110,6 +110,14 @@ function initial() {
               state: "running",
               restarts: 1,
               lastUpdate: { from: "0.1.0", to: "0.2.0", result: "installed", message: "", at: at(70) },
+            },
+          ],
+          // An "Add app" of Oriel that failed there (apt couldn't bring a library).
+          failedInstalls: [
+            {
+              product: "vesper-oriel",
+              name: "Vesper Oriel",
+              outcome: { to: "0.2.0", result: "failed", message: "apt couldn't install it (exit status: 100): vesper-oriel : Depends: libwebkit2gtk-4.1-0 but it is not installable / E: Unable to correct problems, you have held broken packages.", at: at(12) },
             },
           ],
           health: health(6, 5.4, 8, 88, 118, ["i915"]),

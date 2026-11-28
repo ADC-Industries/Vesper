@@ -1,8 +1,9 @@
 // Shots of the Settings page (see scripts/shots.mjs for `ctx`): General with Oriel's settings
 // backup (test/stub/routes/site.mjs keeps what Oriel saved), Captions (and a model downloading,
 // routes/captions.mjs's stub control), Network & IDN (with Control
-// surfaces: listening, and a port that can't be opened, test/stub/routes/settings.mjs), Keyboard and
-// About.
+// surfaces: listening, and a port that can't be opened, test/stub/routes/settings.mjs), CCLI (no
+// licence number yet, the imported songs' one offered; the watcher's switch is the desktop app's,
+// see songselectWatch.mjs), Keyboard and About.
 // Settings is a page (`#/settings`): Esc stays on it, Close goes back.
 const captions = (url, body) => fetch(`${url}/api/v1/__stub/captions`, { method: "POST", body: JSON.stringify(body) });
 
@@ -32,6 +33,7 @@ export default async function ({ page, stub, settle, shot, step }) {
     for (const [name, file] of [
       ["Captions", "settings-captions"],
       ["Network & IDN", "settings-network"],
+      ["CCLI", "settings-ccli"],
       ["Keyboard", "settings-keyboard"],
       ["About", "settings-about"],
     ]) {

@@ -34,3 +34,33 @@ export async function windowCentre(): Promise<{ x: number; y: number } | null> {
     return null;
   }
 }
+
+/** A file in the user's Downloads folder (the shell's `downloads_list`). */
+export interface DownloadFile {
+  name: string;
+  size: number;
+  modifiedMs: number;
+}
+
+/** A download the shell recognised as a SongSelect song by its content. */
+export interface DownloadedSong {
+  name: string;
+  /** The song's title, if the file has one. */
+  title: string | null;
+  /** The file's bytes. */
+  data: number[];
+}
+
+/** The files in the user's Downloads folder (empty in a browser). */
+export async function listDownloads(): Promise<DownloadFile[]> {
+  if (!isTauri()) return [];
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<DownloadFile[]>("downloads_list");
+}
+
+/** A file of the Downloads folder if it is a SongSelect song (null otherwise, or in a browser). */
+export async function downloadedSong(name: string): Promise<DownloadedSong | null> {
+  if (!isTauri()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<DownloadedSong | null>("downloads_song", { name });
+}

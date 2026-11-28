@@ -12,7 +12,7 @@
   import { Button, Select, StatusDot, Switch } from "../../ui";
   import { updatesPage } from "../../state/updates.svelte";
   import { formatWhen } from "./logic";
-  import { addVersion, byProduct, bytes, githubLine, packageSource, productName, queuedAdds, roleLabel, canAct, healthLine, outcomeText, pendingFor, platformLabel, seenAgo, sourcesText, stateLabel, stateTone, updateFor } from "./updates";
+  import { addVersion, broughtIn, byProduct, bytes, failedAdds, githubLine, packageSource, productName, queuedAdds, roleLabel, canAct, healthLine, outcomeText, pendingFor, platformLabel, seenAgo, sourcesText, stateLabel, stateTone, updateFor } from "./updates";
 
   onMount(() => updatesPage.open());
   onDestroy(() => updatesPage.close());
@@ -109,6 +109,7 @@
                 </span>
                 <span class="st-meta" data-testid="updates-health">{healthLine(e.report.health)}</span>
                 {#each queuedAdds(e) as q (q)}<span class="st-meta avail">{q}</span>{/each}
+                {#each failedAdds(e) as f (f.text)}<span class="st-meta bad" data-testid="updates-add-failed">{f.text} · {formatWhen(f.at)}</span>{/each}
               </span>
             </td>
           </tr>
@@ -205,7 +206,7 @@
       <input type="text" class="repo" bind:value={repo} aria-label="GitHub repository" onchange={() => repo.trim() && repo.trim() !== gh?.settings.repository && setGithub({ repository: repo.trim() })} />
     </div>
     {#if gh.added.length}
-      <span class="st-meta">Brought in lately: {gh.added.slice(0, 5).join(" · ")}</span>
+      <span class="st-meta">Brought in lately: {gh.added.slice(0, 5).map(broughtIn).join(" · ")}</span>
     {/if}
   </div>
 {/if}
@@ -286,7 +287,9 @@
     color: var(--accent-link);
     font-size: var(--fs-sm);
   }
-  .bad {
+  .bad,
+  /* (over the Site page's `.st-meta` colour) */
+  span.st-meta.bad {
     color: var(--warn);
   }
   [data-testid="updates-upload"] {

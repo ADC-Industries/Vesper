@@ -4,7 +4,8 @@
   // sections General (Oriel's preferences and their backup to the Codex), Audio, Captions, Network & IDN
   // (with Control surfaces: Remote API compatibility), Recording & streaming (the server's
   // recording and stream targets),
-  // Media (media preparation), Reports (CCLI usage),
+  // Media (media preparation), CCLI (the licence number, the copyright line, the SongSelect
+  // Downloads watcher), Reports (CCLI usage),
   // Keyboard (the shortcut table, read-only), Bible (once the server has scripture, G11) and
   // About. The section is `shell.settingsSection`.
   import { onMount } from "svelte";
@@ -27,6 +28,7 @@
   import MediaPrepSettings from "./MediaPrepSettings.svelte";
   import TranslationSettings from "./TranslationSettings.svelte";
   import CcliReport from "../reports/CcliReport.svelte";
+  import CcliSettings from "./CcliSettings.svelte";
   // Settings ▸ Bible loads with the Bible page's chunk.
   const bibleSettings = () => import("../bible/BibleSettings.svelte");
   import { formatWhen } from "../site/logic";
@@ -39,6 +41,7 @@
     { id: "Network", label: "Network & IDN" },
     { id: "Streaming", label: "Recording & streaming" },
     { id: "Media", label: "Media" },
+    { id: "Ccli", label: "CCLI" },
     { id: "Reports", label: "Reports" },
     { id: "Keyboard", label: "Keyboard" },
     { id: "Bible", label: "Bible" },
@@ -165,6 +168,9 @@
       {:else if section === "Media"}
         <h1>Media</h1>
         <MediaPrepSettings />
+      {:else if section === "Ccli"}
+        <h1>CCLI</h1>
+        <CcliSettings />
       {:else if section === "Reports"}
         <h1>Reports</h1>
         <CcliReport />

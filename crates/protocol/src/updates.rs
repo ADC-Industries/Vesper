@@ -169,8 +169,25 @@ pub struct LauncherReport {
     pub roles: Vec<String>,
     /// The products it manages.
     pub products: Vec<LauncherProduct>,
+    /// "Add app" installs that failed (the product isn't managed here then), newest first;
+    /// one per product, until it is added again.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<FailedInstall>>", optional)]
+    pub failed_installs: Vec<FailedInstall>,
     /// Health numbers.
     pub health: MachineHealth,
+}
+
+/// An "Add app" install that failed on a machine, with the Launcher's reason.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct FailedInstall {
+    /// The product.
+    pub product: String,
+    /// Its name for people.
+    pub name: String,
+    /// How it ended (`failed` or `rolledBack`, the version asked for, the reason, when).
+    pub outcome: UpdateOutcome,
 }
 
 /// An action for a Launcher, queued in Oriel (`POST /api/v1/updates/launchers/{id}/actions`) or

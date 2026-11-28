@@ -147,7 +147,12 @@ impl SystemConfig {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DpkgConfig {
-    /// `dpkg` (installs a package).
+    /// `apt-get` (installs a package with the dependencies it needs from the system's
+    /// repositories: `apt-get install ./<package>.deb`).
+    #[serde(default = "default_apt")]
+    pub apt: PathBuf,
+    /// `dpkg`: no longer used (packages are installed with [`DpkgConfig::apt`]); still accepted
+    /// so an older `launcher.json` loads.
     #[serde(default = "default_dpkg")]
     pub program: PathBuf,
     /// `dpkg-query` (the installed version of a package).
@@ -172,6 +177,7 @@ pub struct DpkgConfig {
 impl Default for DpkgConfig {
     fn default() -> Self {
         DpkgConfig {
+            apt: default_apt(),
             program: default_dpkg(),
             query: default_dpkg_query(),
             deb: default_dpkg_deb(),
@@ -180,6 +186,10 @@ impl Default for DpkgConfig {
             apt_archives: default_apt_archives(),
         }
     }
+}
+
+fn default_apt() -> PathBuf {
+    PathBuf::from("apt-get")
 }
 
 fn default_dpkg() -> PathBuf {
@@ -254,9 +264,9 @@ pub struct ProductConfig {
     rename_all_fields = "camelCase"
 )]
 pub enum InstallKind {
-    /// Linux: the package is a `.deb`, installed with `dpkg -i` (its maintainer scripts restart
-    /// the enabled unit; an edited configuration file is kept); systemd restarts it after a
-    /// crash. The Debian package's name is the product's ID; the version dpkg has installed is
+    /// Linux: the package is a `.deb`, installed with apt (`apt-get install ./<pkg>.deb`, with
+    /// the system packages it needs; its maintainer scripts restart the enabled unit; an edited
+    /// configuration file is kept); systemd restarts it after a crash. The Debian package's name is the product's ID; the version dpkg has installed is
     /// the product's (adopted when it was installed with apt).
     Deb {
         /// Its systemd units (for logs and restart counts; the first enabled one counts).

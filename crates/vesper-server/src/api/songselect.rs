@@ -64,6 +64,11 @@ async fn parse_songselect(State(app): State<AppState>, body: Bytes) -> ApiResult
         like,
         &d.content.global_groups,
     );
+    if let Some(license) = song.license.clone() {
+        // Offered in Settings ▸ CCLI while the church's number isn't set.
+        let sh = app.shared.clone();
+        tokio::task::spawn_blocking(move || sh.ccli.note_imported_license(&license));
+    }
     let number = song.ccli.as_deref().map(song_number).unwrap_or_default();
     let duplicates = if number.is_empty() {
         Vec::new()

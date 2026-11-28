@@ -90,9 +90,10 @@ export function platformLabel(p: string): string {
   return arch ? `${o} (${arch})` : o;
 }
 
-/** Machines needing attention: offline, or a product not running or whose update failed. */
+/** Machines needing attention: offline, a product not running or whose update failed, or an
+ * "Add app" that failed. */
 export function attentionCount(entries: LauncherEntry[]): number {
-  return entries.filter((e) => !e.online || e.report.products.some((p) => p.state === "failed" || p.lastUpdate?.result === "failed")).length;
+  return entries.filter((e) => !e.online || e.report.products.some((p) => p.state === "failed" || p.lastUpdate?.result === "failed") || failedAdds(e).length > 0).length;
 }
 
 /** Packages grouped by product, newest first within each (as the server lists them). */
@@ -135,6 +136,26 @@ export function productName(p: string): string {
 /** "Add app" queued on a machine, in words ("Adding Vesper Oriel 0.2.0 (queued)"). */
 export function queuedAdds(e: LauncherEntry): string[] {
   return e.pending.flatMap((a) => (a.type === "install" ? [`Adding ${productName(a.product)} ${a.version} (queued)`] : []));
+}
+
+/** "Add app" installs that failed on a machine, with the Launcher's reason ("Adding Vesper
+ * Oriel 0.2.0 failed: …"); not one queued again or installed since. */
+export function failedAdds(e: LauncherEntry): { text: string; at: string }[] {
+  return (e.report.failedInstalls ?? [])
+    .filter((f) => !e.pending.some((a) => a.type === "install" && a.product === f.product))
+    .filter((f) => !e.report.products.some((p) => p.product === f.product && p.version))
+    .map((f) => {
+      const o = f.outcome;
+      const why = o.result === "rolledBack" ? "it didn't come up healthy and was taken out again" : o.message || "the Launcher gave no reason";
+      return { text: `Adding ${f.name || productName(f.product)} ${o.to} failed: ${why}`, at: o.at };
+    });
+}
+
+/** A "Brought in lately" line from GitHub (`<product> <version> for <platform>`) with the
+ * product's and the platform's names. */
+export function broughtIn(line: string): string {
+  const m = /^(\S+) (\S+) for (\S+)$/.exec(line);
+  return m ? `${productName(m[1]!)} ${m[2]} for ${platformLabel(m[3]!)}` : line;
 }
 
 /** The version "Add app" installs: the newest stable, else the beta. */

@@ -2495,7 +2495,7 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 [[package]]
 name = "idn-asio-abi"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "idn-common",
  "libc",
@@ -2505,7 +2505,7 @@ dependencies = [
 [[package]]
 name = "idn-audio"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "cpal",
  "idn-asio-abi",
@@ -2522,7 +2522,7 @@ dependencies = [
 [[package]]
 name = "idn-captions"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "idn-common",
  "idn-open-protocol",
@@ -2537,7 +2537,7 @@ dependencies = [
 [[package]]
 name = "idn-common"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "libc",
  "serde",
@@ -2548,7 +2548,7 @@ dependencies = [
 [[package]]
 name = "idn-dsp"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "idn-open-protocol",
  "nnnoiseless",
@@ -2557,7 +2557,7 @@ dependencies = [
 [[package]]
 name = "idn-feeds"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "idn-open-protocol",
  "serde_json",
@@ -2566,7 +2566,7 @@ dependencies = [
 [[package]]
 name = "idn-ffmpeg"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "ffmpeg-sys-next",
  "idn-common",
@@ -2581,7 +2581,7 @@ dependencies = [
 [[package]]
 name = "idn-mqtt"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "bytes",
  "idn-common",
@@ -2596,7 +2596,7 @@ dependencies = [
 [[package]]
 name = "idn-omt"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "cc",
  "idn-common",
@@ -2606,7 +2606,7 @@ dependencies = [
 [[package]]
 name = "idn-open-protocol"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "argon2 0.6.0",
  "bytes",
@@ -2637,7 +2637,7 @@ dependencies = [
 [[package]]
 name = "idn-site-manager"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "axum",
  "idn-common",
@@ -2654,7 +2654,7 @@ dependencies = [
 [[package]]
 name = "idn-voice"
 version = "0.3.8"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "axum",
  "bytes",
@@ -5431,7 +5431,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "statime"
 version = "0.4.0"
-source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta18#6904be89f78f359419edeb9d3c3fc2eacba18247"
+source = "git+https://github.com/ADC-Industries/idn-open-protocol?tag=v0.3.8-Beta21#2d426000e5bc3694db3f00e6085b2dbbbd06167b"
 dependencies = [
  "arrayvec",
  "az",
@@ -6290,7 +6290,7 @@ dependencies = [
 
 [[package]]
 name = "vesper-launcher"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",

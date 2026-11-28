@@ -1,4 +1,4 @@
-//! Installing a stored package, per [`InstallKind`]: `dpkg -i` (Linux), the NSIS installer run
+//! Installing a stored package, per [`InstallKind`]: `apt-get install ./<package>.deb` (Linux), the NSIS installer run
 //! silently (Windows), or a versioned folder whose executable the Launcher runs itself
 //! ([`Supervisor`], restarted after a crash with back-off).
 
@@ -12,13 +12,18 @@ use tokio::sync::watch;
 /// Runs a system installer for `kind` (blocking). For [`InstallKind::Dir`] nothing runs here:
 /// the Launcher copies and starts the executable ([`dir_install`], [`Supervisor`]).
 ///
-/// A `.deb` waits until no other dpkg or apt run holds dpkg's lock (an install the Launcher
-/// started before it restarted, unattended upgrades), for at most `dpkg.lock_timeout_secs`, and
-/// is installed without questions: a configuration file the admin edited is kept (the
-/// package's new one is left beside it as `.dpkg-dist`).
+/// A `.deb` is installed with apt (`apt-get install ./<package>.deb`, [`APT_INSTALL`]), so
+/// the system packages it needs come along from the machine's repositories (the package lists
+/// are refreshed once when apt can't find or fetch one). It waits until no other dpkg or apt
+/// run holds dpkg's lock (an install the Launcher started before it restarted, unattended
+/// upgrades), for at most `dpkg.lock_timeout_secs`, and is installed without questions
+/// ([`APT_ENV`]): a configuration file the admin edited is kept (the package's new one is left
+/// beside it as `.dpkg-dist`), an older version is installed when asked (a rollback), and
+/// nothing is ever removed (apt stops instead). A failure says what apt said
+/// ([`apt_failure`]).
 ///
-/// `with`: more `.deb`s installed in the same dpkg run (the packages of other products this
-/// one's package needs at a newer version: [`crate::Launcher`]'s companions).
+/// `with`: more `.deb`s installed in the same run (the packages of other products this one's
+/// package needs at a newer version: [`crate::Launcher`]'s companions).
 pub fn run_system_installer(
     kind: &InstallKind,
     package: &Path,
@@ -28,11 +33,11 @@ pub fn run_system_installer(
     let deb = matches!(kind, InstallKind::Deb { .. });
     let mut cmd = match kind {
         InstallKind::Deb { .. } => {
-            let mut c = std::process::Command::new(&dpkg.program);
-            c.args(DPKG_INSTALL)
-                .args(with)
-                .arg(package)
-                .env("DEBIAN_FRONTEND", "noninteractive");
+            let mut c = std::process::Command::new(&dpkg.apt);
+            c.args(APT_INSTALL)
+                .args(with.iter().map(|p| local_deb(p)))
+                .arg(local_deb(package))
+                .envs(APT_ENV);
             c
         }
         InstallKind::Nsis { args, .. } => {
@@ -44,6 +49,7 @@ pub fn run_system_installer(
     };
     cmd.stdin(std::process::Stdio::null());
     let deadline = Instant::now() + Duration::from_secs(dpkg.lock_timeout_secs);
+    let mut refreshed = false;
     loop {
         if deb && !wait_dpkg_idle(dpkg, deadline) {
             return Err(format!(
@@ -57,18 +63,136 @@ pub fn run_system_installer(
         if out.status.success() {
             return Ok(());
         }
-        let err = String::from_utf8_lossy(&out.stderr);
-        if deb && err.contains("locked by another process") && Instant::now() < deadline {
+        let (stdout, stderr) = (
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+        if !deb {
+            let tail: Vec<&str> = stderr.lines().rev().take(5).collect();
+            return Err(format!(
+                "the installer failed ({}): {}",
+                out.status,
+                tail.into_iter().rev().collect::<Vec<_>>().join(" / ")
+            ));
+        }
+        let text = format!("{stdout}\n{stderr}");
+        if LOCKED.iter().any(|m| text.contains(m)) && Instant::now() < deadline {
             // Another dpkg or apt took the lock in between: wait for it again.
             std::thread::sleep(Duration::from_millis(500));
             continue;
         }
-        let tail: Vec<&str> = err.lines().rev().take(5).collect();
+        if !refreshed && STALE_LISTS.iter().any(|m| text.contains(m)) {
+            // A needed package isn't in (or can't be fetched with) the package lists apt has:
+            // refreshed once, then tried again.
+            refreshed = true;
+            let updated = std::process::Command::new(&dpkg.apt)
+                .args(["update", "-q"])
+                .envs(APT_ENV)
+                .stdin(std::process::Stdio::null())
+                .output();
+            match updated {
+                Ok(u) if u.status.success() => continue,
+                Ok(u) => tracing::warn!(
+                    "apt-get update failed ({}): {}",
+                    u.status,
+                    String::from_utf8_lossy(&u.stderr).trim()
+                ),
+                Err(e) => tracing::warn!("apt-get update didn't start: {e}"),
+            }
+        }
         return Err(format!(
-            "the installer failed ({}): {}",
+            "apt couldn't install it ({}): {}",
             out.status,
-            tail.into_iter().rev().collect::<Vec<_>>().join(" / ")
+            apt_failure(&stdout, &stderr)
         ));
+    }
+}
+
+/// `apt-get`'s arguments before the packages: install without asking (`-y`), quietly (no
+/// progress lines), an older version too (a rollback), never removing a package to make room
+/// (it stops instead: a package that `Breaks:` the Launcher must not take it away), and keep a
+/// configuration file the admin edited (`--force-confdef --force-confold`) instead of asking
+/// (with no one to answer, dpkg would stop there and leave the package half-configured).
+pub const APT_INSTALL: [&str; 9] = [
+    "install",
+    "-y",
+    "-q",
+    "--allow-downgrades",
+    "--no-remove",
+    "-o",
+    "Dpkg::Options::=--force-confdef",
+    "-o",
+    "Dpkg::Options::=--force-confold",
+];
+
+/// The environment of an apt run: no questions (debconf, apt-listchanges), Ubuntu's
+/// `needrestart` left out (it would ask, or restart services, the Launcher among them), and
+/// apt's messages in English (read here and shown in the failure).
+pub const APT_ENV: [(&str, &str); 4] = [
+    ("DEBIAN_FRONTEND", "noninteractive"),
+    ("APT_LISTCHANGES_FRONTEND", "none"),
+    ("NEEDRESTART_SUSPEND", "1"),
+    ("LC_ALL", "C.UTF-8"),
+];
+
+/// What dpkg and apt say when another run holds the lock.
+const LOCKED: [&str; 3] = [
+    "locked by another process",
+    "Could not get lock",
+    "Unable to acquire the dpkg frontend lock",
+];
+
+/// What apt says when its package lists are out of date (or were never fetched).
+const STALE_LISTS: [&str; 4] = [
+    "Unable to fetch some archives",
+    "is not installable",
+    "has no installation candidate",
+    "404  Not Found",
+];
+
+/// A path apt reads as a package file, not a package name (it has a `/`).
+fn local_deb(p: &Path) -> PathBuf {
+    if p.is_absolute() || p.starts_with(".") {
+        p.to_path_buf()
+    } else {
+        Path::new(".").join(p)
+    }
+}
+
+/// apt's output, trimmed to what says why an install failed: its errors (`E:`), the
+/// unmet-dependency lines and dpkg's errors, else its last lines; at most 8 lines and 600
+/// characters, joined with ` / `.
+pub fn apt_failure(stdout: &str, stderr: &str) -> String {
+    let lines: Vec<&str> = stdout
+        .lines()
+        .chain(stderr.lines())
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        // apt's note that it read a root-only file as root: not why it failed.
+        .filter(|l| !l.starts_with("N: Download is performed unsandboxed"))
+        .collect();
+    let telling: Vec<&str> = lines
+        .iter()
+        .copied()
+        .filter(|l| {
+            l.starts_with("E:")
+                || l.starts_with("dpkg: error")
+                || l.contains("Depends:")
+                || l.contains("Breaks:")
+                || l.contains("Conflicts:")
+        })
+        .collect();
+    let pick = if telling.is_empty() { &lines } else { &telling };
+    let tail = &pick[pick.len().saturating_sub(8)..];
+    let mut text = tail.join(" / ");
+    if text.chars().count() > 600 {
+        let cut: String = text.chars().take(599).collect();
+        text = format!("{cut}…");
+    }
+    if text.is_empty() {
+        "it said nothing".into()
+    } else {
+        text
     }
 }
 
@@ -117,7 +241,7 @@ pub fn satisfies(have: &str, op: &str, want: &str) -> bool {
 }
 
 /// A `.deb`'s dependencies (`dpkg-deb -f PACKAGE Depends`, blocking). One dpkg-deb can't read
-/// has none here: `dpkg -i` says what is wrong with it.
+/// has none here: apt says what is wrong with it.
 pub fn deb_depends(dpkg: &DpkgConfig, package: &Path) -> Vec<DebDepend> {
     match std::process::Command::new(&dpkg.deb)
         .arg("-f")
@@ -141,11 +265,6 @@ pub fn deb_depends(dpkg: &DpkgConfig, package: &Path) -> Vec<DebDepend> {
         }
     }
 }
-
-/// `dpkg`'s arguments before the package: install, and keep a configuration file the admin
-/// edited (`--force-confdef --force-confold`) instead of asking (with no one to answer, dpkg
-/// would stop there and leave the package half-configured).
-pub const DPKG_INSTALL: [&str; 3] = ["--force-confdef", "--force-confold", "-i"];
 
 /// The version of Debian package `package` dpkg has installed (blocking): `None` when it
 /// isn't installed (or only its configuration files are left), or dpkg can't be asked.
@@ -430,6 +549,31 @@ mod tests {
         assert!(satisfies("0.1.0-2", "<<", "0.2.0"));
         assert!(!satisfies("0.2.0", ">>", "0.2.0"));
         assert!(satisfies("0.2.0", "=", "0.2.0"));
+    }
+
+    #[test]
+    fn apts_failure_is_trimmed_to_why() {
+        let stdout = "Reading package lists...\nBuilding dependency tree...\n\nThe following packages have unmet dependencies:\n vesper : Depends: libexample1 but it is not installable\n";
+        let stderr = "N: Download is performed unsandboxed as root\nE: Unable to correct problems, you have held broken packages.\n";
+        assert_eq!(
+            apt_failure(stdout, stderr),
+            "vesper : Depends: libexample1 but it is not installable / E: Unable to correct problems, you have held broken packages."
+        );
+        // Nothing telling: its last lines.
+        let many: String = (0..20).map(|i| format!("line {i}\n")).collect();
+        let t = apt_failure(&many, "");
+        assert!(t.starts_with("line 12 / ") && t.ends_with("line 19"), "{t}");
+        assert_eq!(apt_failure("", "\n"), "it said nothing");
+        let long = format!("E: {}", "x".repeat(2000));
+        assert_eq!(apt_failure("", &long).chars().count(), 600);
+    }
+
+    #[test]
+    fn a_package_path_apt_reads_as_a_file() {
+        assert_eq!(local_deb(Path::new("/s/p.deb")), Path::new("/s/p.deb"));
+        assert_eq!(local_deb(Path::new("p.deb")), Path::new("./p.deb"));
+        assert_eq!(local_deb(Path::new("./p.deb")), Path::new("./p.deb"));
+        assert_eq!(local_deb(Path::new("d/p.deb")), Path::new("./d/p.deb"));
     }
 
     #[test]

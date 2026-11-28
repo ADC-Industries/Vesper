@@ -50,6 +50,10 @@ enum Request {
         op: crate::inputs::InputOp,
         reply: oneshot::Sender<Result<crate::inputs::InputResult, ConfigError>>,
     },
+    Settings {
+        settings: Box<model::ShowSettings>,
+        reply: oneshot::Sender<Result<(), ApiError>>,
+    },
 }
 
 /// Longest stage message, characters.
@@ -98,6 +102,21 @@ impl ShowHandle {
         let (reply, rx) = oneshot::channel();
         self.tx
             .send(Request::Inputs { op, reply })
+            .await
+            .map_err(|_| ApiError::new(ErrorCode::Unavailable, "the server is shutting down"))?;
+        rx.await
+            .map_err(|_| ApiError::new(ErrorCode::Internal, "the show actor stopped"))?
+    }
+
+    /// Saves new show settings and swaps them in (every screen re-renders: the CCLI line).
+    /// Runs in order with the show commands.
+    pub async fn settings(&self, settings: model::ShowSettings) -> Result<(), ApiError> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(Request::Settings {
+                settings: Box::new(settings),
+                reply,
+            })
             .await
             .map_err(|_| ApiError::new(ErrorCode::Unavailable, "the server is shutting down"))?;
         rx.await
@@ -327,6 +346,9 @@ impl Actor {
                                 tracing::info!("video input change refused: {}", e.error);
                             }
                             let _ = reply.send(res);
+                        }
+                        Some(Request::Settings { settings, reply }) => {
+                            let _ = reply.send(self.change_settings(*settings).await);
                         }
                     }
                 }
@@ -1549,6 +1571,41 @@ impl Actor {
                 }));
         }
         Ok(plan.result)
+    }
+
+    /// Saves the show settings (this box's document) and swaps them in.
+    async fn change_settings(&mut self, mut settings: model::ShowSettings) -> Result<(), ApiError> {
+        let data = self.shared.data();
+        settings.schema_version = model::SCHEMA_VERSION;
+        let write = crate::store::DocWrite::put(&settings)
+            .map_err(|e| ApiError::new(ErrorCode::Internal, e.to_string()))?;
+        let root = data.root.clone();
+        tokio::task::spawn_blocking(move || crate::store::apply(&root, &[write]))
+            .await
+            .map_err(|e| ApiError::new(ErrorCode::Internal, e.to_string()))?
+            .map_err(|e| match e {
+                crate::store::StoreError::TooNew(m) => ApiError::new(ErrorCode::Conflict, m),
+                crate::store::StoreError::Io(e) => ApiError::new(
+                    ErrorCode::Internal,
+                    format!("saving the settings failed: {e:#}"),
+                ),
+            })?;
+        self.shared.set_data(Arc::new(data.with_settings(settings)));
+        self.shared.publish(self.state.clone());
+        self.broadcast();
+        let _ = self
+            .shared
+            .events
+            .send(Arc::new(ServerMessage::DocumentChanged {
+                kind: DocumentKind::ShowSettings,
+                id: uuid::Uuid::nil().to_string(),
+                change: DocumentChange::Changed,
+                revision: None,
+                client_id: None,
+                ops: None,
+                collection: None,
+            }));
+        Ok(())
     }
 
     /// Swaps in a change of the active collection (see [`CollectionUpdate`]); the Codex

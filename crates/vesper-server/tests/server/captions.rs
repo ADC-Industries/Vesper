@@ -280,7 +280,8 @@ async fn engine_runs_on_the_program_bus() {
         eprintln!("skipped: VESPER_TEST_WHISPER_DIR is not set");
         return;
     };
-    let (server, ws) = engine_server("captions-engine", &models, "cpu").await;
+    let (server, ws, _workers) =
+        engine_server("captions-engine", &models, json!({"processor": "cpu"})).await;
     let addr = server.addr;
     let c = &ws.state["captions"];
     assert_eq!(c["status"], "running", "{c}");
@@ -317,7 +318,8 @@ async fn engine_runs_on_the_gpu_or_says_why_not() {
         eprintln!("skipped: VESPER_TEST_WHISPER_DIR is not set");
         return;
     };
-    let (server, ws) = engine_server("captions-engine-gpu", &models, "gpu").await;
+    let (server, ws, _workers) =
+        engine_server("captions-engine-gpu", &models, json!({"processor": "gpu"})).await;
     let c = &ws.state["captions"];
     eprintln!("captions on: {c}");
     assert_eq!(c["status"], "running", "{c}");
@@ -334,13 +336,19 @@ async fn engine_runs_on_the_gpu_or_says_why_not() {
     server.shutdown().await.unwrap();
 }
 
-/// A server whose captions run `base.en` (from `models`) on `processor`, once the engine is
-/// running or has failed (the state then in the client).
+/// A server whose captions run `base.en` (from `models`) with the settings `more` (the
+/// processor, the source), once the engine is running or has failed (the state then in the
+/// client).
 async fn engine_server(
     name: &str,
     models: &std::ffi::OsStr,
-    processor: &str,
-) -> (vesper_server::RunningServer, Client) {
+    more: Value,
+) -> (
+    vesper_server::RunningServer,
+    Client,
+    tokio::sync::MutexGuard<'static, ()>,
+) {
+    let workers = WORKERS.lock().await;
     let fx = fixture(name);
     let cache = fx.dir.join("cache").join("whisper");
     std::fs::create_dir_all(&cache).unwrap();
@@ -353,18 +361,69 @@ async fn engine_server(
     let server = start_server_with(&fx, |c| c.captions.worker = Some(vesper())).await;
     let addr = server.addr;
     let mut ws = Client::connect(addr, "protocolVersion=1").await;
-    let r = put_config(
-        addr,
-        json!({"enabled": true, "model": "base.en", "processor": processor}),
-    )
-    .await;
+    let mut cfg = json!({"enabled": true, "model": "base.en"});
+    cfg.as_object_mut()
+        .unwrap()
+        .extend(more.as_object().unwrap().clone());
+    let r = put_config(addr, cfg).await;
     assert_eq!(r.status, 200, "{:?}", r.json());
     ws.wait_state("the engine runs", |_, s| {
         s["captions"]["status"] == "running" || s["captions"]["status"] == "error"
     })
     .await;
-    (server, ws)
+    (server, ws, workers)
 }
+
+/// IDN Beta21's `Engine::tend`: with no sound to step with (a network source that sends
+/// nothing), a worker that ends is still noticed and started again on IDN's schedule (1 s
+/// after it ended), not only once sound comes. Needs `VESPER_TEST_WHISPER_DIR`, as above.
+#[cfg(target_os = "linux")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_worker_that_ends_in_silence_starts_again() {
+    let Some(models) = std::env::var_os("VESPER_TEST_WHISPER_DIR") else {
+        eprintln!("skipped: VESPER_TEST_WHISPER_DIR is not set");
+        return;
+    };
+    let source = json!({"source": {"type": "liveSource", "name": "NOWHERE (Synthetic Mic)"},
+                        "processor": "cpu"});
+    let (server, ws, _workers) = engine_server("captions-engine-tend", &models, source).await;
+    assert_eq!(
+        ws.state["captions"]["status"], "running",
+        "{}",
+        ws.state["captions"]
+    );
+    // Ours alone (a worker of the test before may still be ending).
+    let end = std::time::Instant::now() + Duration::from_secs(10);
+    let mut before = captions_workers();
+    while before.len() != 1 && std::time::Instant::now() < end {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        before = captions_workers();
+    }
+    assert_eq!(before.len(), 1, "one worker: {before:?}");
+    let killed = std::process::Command::new("kill")
+        .args(["-KILL", &before[0].to_string()])
+        .status()
+        .unwrap();
+    assert!(killed.success());
+    // Started again within IDN's first wait (1 s) and a few of our steps (0.5 s each).
+    let end = std::time::Instant::now() + Duration::from_secs(15);
+    loop {
+        let now = captions_workers();
+        if now.iter().any(|p| !before.contains(p)) {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < end,
+            "no new worker after the first one ended: {now:?}"
+        );
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+    server.shutdown().await.unwrap();
+}
+
+/// Held by each test that starts a captions worker: they count this process's worker children,
+/// so two at once would see each other's.
+static WORKERS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// The `vesper` binary: IDN's captions worker in the server (`vesper --idn-captions-worker`).
 fn vesper() -> std::path::PathBuf {
@@ -399,6 +458,7 @@ fn captions_workers() -> Vec<u32> {
 /// without a real model: the test's file is used as it is.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_engine_whose_worker_fails_leaves_the_server_running() {
+    let _workers = WORKERS.lock().await;
     let fx = fixture("captions-worker-fails");
     let model = fx.dir.join("ggml-base.en.bin");
     std::fs::write(&model, b"not a whisper model: synthetic bytes for the test").unwrap();

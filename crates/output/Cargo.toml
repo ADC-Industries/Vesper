@@ -14,7 +14,7 @@ png = "0.18.1"
 # IDN Open Protocol (an open network video library compatible with NDI®): the network video
 # transport. Developed separately and used only as a path dependency (never vendored here);
 # it must become a git (or crates.io) dependency before this crate is published.
-idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
 # Open Media Transport (OMT) sources and receivers, with the VMX codec compiled in (C/C++ built
 # by the `cc` crate): from the same IDN release.
-idn-omt = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-omt = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }

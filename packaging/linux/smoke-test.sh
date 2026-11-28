@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # Smoke test of the .debs in throwaway Ubuntu containers (podman, rootless), never on the host:
-#   1. apt installs the server, the Launcher, the bundled IDN Node and the tray with their
+#   1. Upgrade order: under an older Launcher (the package repacked as 0.1.0) dpkg refuses the
+#      bundled IDN Node's package (it `Breaks:` Launchers before 0.1.1), and apt installs the two
+#      together, the Launcher first.
+#      apt installs the server, the Launcher, the bundled IDN Node and the tray with their
 #      dependencies; `vesper --help` runs; the vesper user, its groups and the data folder
 #      exist; systemd accepts the units; nothing in `ldd` is missing (the IDN programs and the
 #      tray too); the tray starts at log-in (XDG autostart).
-#   2. The container boots systemd: the service starts by itself (no GPU in the container:
+#   2. The container boots systemd, the Launcher configured with GitHub checks off (no
+#      network calls of its own in the test): the service starts by itself (no GPU in the container:
 #      Mesa's software renderer), answers on :5555 and serves the control UI; the Launcher
 #      runs and knows the installed version (dpkg's); a display box (vesper-display enabled)
 #      keeps its unit usable across apt remove + install, and the Launcher runs again; then
@@ -46,7 +50,7 @@ debs=(-v "$deb:/tmp/vesper.deb:ro" -v "$launcher_deb:/tmp/vesper-launcher.deb:ro
 # A newer bundled IDN Node package (the same programs, its revision raised to 99), signed with a
 # throwaway key (packaging/linux/smoke-sign.py, python3-cryptography): the Launcher updates it.
 idn_sign_dir="$(mktemp -d)"
-trap 'rm -rf -- "$idn_sign_dir"' EXIT
+trap 'rm -rf -- "$idn_sign_dir" "${old_launcher_dir:-}"' EXIT
 idn_new="$(dpkg-deb -f "$idn_deb" Version | sed 's/-[^-]*$//')-99"
 dpkg-deb -R "$idn_deb" "$idn_sign_dir/pkg"
 sed -i "s/^Version: .*/Version: $idn_new/" "$idn_sign_dir/pkg/DEBIAN/control"
@@ -55,12 +59,20 @@ rm -rf -- "$idn_sign_dir/pkg"
 python3 -I "$root/packaging/linux/smoke-sign.py" "$idn_sign_dir" "$idn_sign_dir/idn.deb" vesper-idn-node \
   "$idn_new" "linux-$(uname -m)"
 debs+=(-v "$idn_sign_dir:/tmp/idnsign:ro")
+# The Launcher's package as an older Launcher (0.1.0, before the IDN Node's package's
+# `Breaks:` bound): the upgrade order is checked with it.
+old_launcher_dir="$(mktemp -d)"
+dpkg-deb -R "$launcher_deb" "$old_launcher_dir/pkg"
+sed -i "s/^Version: .*/Version: 0.1.0-2/" "$old_launcher_dir/pkg/DEBIAN/control"
+dpkg-deb --root-owner-group -Zxz --build "$old_launcher_dir/pkg" "$old_launcher_dir/vesper-launcher-old.deb" >/dev/null
+rm -rf -- "$old_launcher_dir/pkg"
+debs+=(-v "$old_launcher_dir:/tmp/oldlauncher:ro")
 previous="${2:-}"
 prev_mount=()
 if [[ -n "$previous" ]]; then
   previous="$(realpath "$previous")"
   sign_dir="$(mktemp -d)"
-  trap 'rm -rf -- "$sign_dir" "$idn_sign_dir"' EXIT
+  trap 'rm -rf -- "$sign_dir" "$idn_sign_dir" "$old_launcher_dir"' EXIT
   python3 -I "$root/packaging/linux/smoke-sign.py" "$sign_dir" "$deb" vesper \
     "$(dpkg-deb -f "$deb" Version)" "linux-$(uname -m)"
   mv "$sign_dir/$(basename "$deb").minisig" "$sign_dir/vesper.minisig"
@@ -74,6 +86,18 @@ echo "== $deb (+ $(basename "$launcher_deb"), $(basename "$idn_deb"), $(basename
 podman run --rm "${debs[@]}" "$image" bash -euc '
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
+  # Upgrade order: an older Launcher can'"'"'t take the IDN Node'"'"'s package (Breaks); apt brings
+  # the new Launcher with it.
+  apt-get install -y -qq --no-install-recommends /tmp/oldlauncher/vesper-launcher-old.deb >/dev/null
+  if dpkg -i /tmp/vesper-idn-node.deb >/tmp/dpkg.out 2>&1; then
+    echo "the IDN Node package went in under Launcher 0.1.0"; exit 1
+  fi
+  grep -q "breaks vesper-launcher" /tmp/dpkg.out || { cat /tmp/dpkg.out; exit 1; }
+  echo "-- under Launcher 0.1.0, dpkg refuses the IDN Node package: $(grep -m1 -o "breaks vesper-launcher[^)]*)" /tmp/dpkg.out)"
+  dpkg --remove vesper-idn-node >/dev/null 2>&1 || true
+  apt-get install -y -qq --no-install-recommends /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb >/dev/null
+  echo "-- apt: launcher $(dpkg-query -W -f="\${Version}" vesper-launcher), IDN Node $(dpkg-query -W -f="\${Version} \${db:Status-Status}" vesper-idn-node)"
+  test "$(dpkg-query -W -f="\${db:Status-Status}" vesper-idn-node)" = installed
   apt-get install -y -qq --no-install-recommends /tmp/vesper.deb /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb /tmp/vesper-launcher-tray.deb curl >/dev/null
   echo "-- vesper --help"; vesper --help | head -n 5
   echo "-- vesper-launcher join --help"; vesper-launcher join --help | head -n 3
@@ -99,7 +123,7 @@ echo "== boot test (systemd in the container)"
 cleanup() {
   podman rm -f "$name" >/dev/null 2>&1 || true
   [[ -z "${sign_dir:-}" ]] || rm -rf -- "$sign_dir"
-  rm -rf -- "$idn_sign_dir"
+  rm -rf -- "$idn_sign_dir" "$old_launcher_dir"
 }
 trap cleanup EXIT
 # --privileged stays inside rootless podman's user namespace; systemd needs it to set up the
@@ -116,16 +140,23 @@ podman exec -e IDN_NEW="$idn_new" "$name" bash -euc '
   export DEBIAN_FRONTEND=noninteractive
   # The image forbids starting services from maintainer scripts; a real machine does not.
   rm -f /usr/sbin/policy-rc.d
+  # The Launcher without GitHub checks (no network calls of its own here): its configuration
+  # file in place before the package, kept by every install below (confold).
+  mkdir -p /etc/vesper
+  dpkg-deb --fsys-tarfile /tmp/vesper-launcher.deb | tar -xO ./etc/vesper/launcher.json \
+    | sed "1a\\  \"github\": {\"enabled\": false}," > /etc/vesper/launcher.json
+  grep -q "\"github\": {\"enabled\": false}" /etc/vesper/launcher.json
+  echo "-- Launcher: GitHub checks off"
   launcher_up() {
     for i in $(seq 30); do curl -fsS -o /dev/null http://127.0.0.1:5556/launcher/v1/status 2>/dev/null && return 0; sleep 1; done
     return 1
   }
   if [ -f /tmp/previous.deb ]; then
-    apt-get install -y -qq --no-install-recommends /tmp/previous.deb curl >/dev/null
+    apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold /tmp/previous.deb curl >/dev/null
     echo "-- previous: $(dpkg-query -W -f="\${Version}" vesper), service $(systemctl is-active vesper.service || true)"
     # Through the Launcher, like an update from the site channel: from its local API.
     new="$(dpkg-deb -f /tmp/vesper.deb Version)"
-    apt-get install -y -qq --no-install-recommends /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb >/dev/null
+    apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb >/dev/null
     install -D -m 0644 /tmp/sign/smoke.pub /etc/vesper/update-keys/smoke.pub
     # (The server as a product of the Launcher: the file the new package brings.)
     if [ ! -f /etc/vesper/launcher.d/vesper.json ]; then
@@ -140,10 +171,10 @@ podman exec -e IDN_NEW="$idn_new" "$name" bash -euc '
     echo "-- updated by the Launcher: $(echo "$outcome" | grep -o "\"result\":\"[a-zA-Z]*\""), vesper $(dpkg-query -W -f="\${Version} \${db:Status-Status}" vesper), service $(systemctl is-active vesper.service || true)"
     echo "$outcome" | grep -q "\"result\":\"installed\"" || { echo "$outcome"; exit 1; }
     test "$(dpkg-query -W -f="\${Version} \${db:Status-Status}" vesper)" = "$new installed"
-    apt-get install -y -qq --no-install-recommends /tmp/vesper.deb /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb >/dev/null
+    apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold /tmp/vesper.deb /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb >/dev/null
     echo "-- upgraded to $(dpkg-query -W -f="\${Version}" vesper), launcher $(dpkg-query -W -f="\${Version}" vesper-launcher)"
   fi
-  apt-get install -y -qq --no-install-recommends /tmp/vesper.deb /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb curl >/dev/null
+  apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold /tmp/vesper.deb /tmp/vesper-launcher.deb /tmp/vesper-idn-node.deb curl >/dev/null
   launcher_up
   echo "-- launcher: $(systemctl is-active vesper-launcher.service)"; systemctl is-active --quiet vesper-launcher.service
   # (Adopted from dpkg at its next health check once dpkg has finished configuring.)
@@ -197,7 +228,7 @@ podman exec -e IDN_NEW="$idn_new" "$name" bash -euc '
   systemctl disable --quiet --now vesper.service
   systemctl enable --quiet vesper-display.service
   apt-get remove -y -qq vesper >/dev/null
-  apt-get install -y -qq --no-install-recommends /tmp/vesper.deb /tmp/vesper-launcher.deb >/dev/null
+  apt-get install -y -qq --no-install-recommends -o Dpkg::Options::=--force-confold /tmp/vesper.deb /tmp/vesper-launcher.deb >/dev/null
   state="$(systemctl is-enabled vesper-display.service 2>/dev/null || true)"
   echo "-- display unit after remove + install: $state"; test "$state" = enabled
   launcher_up

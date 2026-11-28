@@ -45,6 +45,11 @@ revision="${VESPER_DEB_REVISION:-2}"
 # product at a time; it installs a needed product's package with it when the bound is raised).
 # Raise it only when the server needs something a newer Launcher brings.
 min_launcher="0.1.0"
+# The oldest Launcher the bundled IDN Node's package works with: 0.1.1, the first release's
+# (Launchers before it were test builds that installed with dpkg -i, without the dependencies
+# apt brings). Its package `Breaks:` older ones, so dpkg refuses it under an old Launcher and
+# apt upgrades the Launcher first (packaging/linux/smoke-test.sh checks both).
+idn_min_launcher="0.1.1"
 arch="$(dpkg --print-architecture)"
 # Reproducible timestamps: the last commit's time.
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$root" log -1 --format=%ct)}"
@@ -237,7 +242,7 @@ EOF
 # ---- vesper-idn-node: the bundled IDN Node and tools -----------------------------------------
 idn_tag="$(sed -n 's/^IDN Open Protocol.*, release \([^ ]*\) .*/\1/p' "$idn/VERSION.txt")"
 [[ -n "$idn_tag" ]] || { echo "no release in $idn/VERSION.txt" >&2; exit 1; }
-# v0.3.8-Beta18 → 0.3.8~beta18 (a pre-release sorts before 0.3.8).
+# v0.3.8-Beta21 → 0.3.8~beta21 (a pre-release sorts before 0.3.8).
 idn_version="$(printf '%s' "${idn_tag#v}" | sed 's/-\(.*\)$/~\1/' | tr '[:upper:]' '[:lower:]')"
 idn_revision="${VESPER_IDN_DEB_REVISION:-1}"
 pkg="$work/vesper-idn-node"
@@ -269,6 +274,7 @@ Version: ${idn_version}-${idn_revision}
 Architecture: ${arch}
 Maintainer: Dylan Charpentier <info@adcnetwork.org>
 Depends: ${deps}, libvulkan1, mesa-vulkan-drivers, systemd
+Breaks: vesper-launcher (<< ${idn_min_launcher})
 Section: video
 Priority: optional
 Description: IDN Node and tools, as bundled with the Vesper Launcher

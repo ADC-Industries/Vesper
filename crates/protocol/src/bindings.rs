@@ -285,6 +285,7 @@ pub fn export_all(out_dir: &Path) -> Result<Vec<String>, ExportError> {
         crate::SetMediaTrim,
         // Reports
         crate::CcliReport,
+        crate::CcliLicenseStatus,
         crate::ChordProParse,
         crate::ChordProParsed,
         // SongSelect files and pasted lyrics

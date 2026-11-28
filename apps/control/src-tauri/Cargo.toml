@@ -24,6 +24,8 @@ tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 # Wire types and mDNS discovery (the same crate the server uses).
 protocol = { path = "../../../crates/protocol", features = ["discover"] }
+# SongSelect files recognised by content (the SongSelect Downloads watcher).
+model = { path = "../../../crates/model" }
 
 [profile.release]
 codegen-units = 1

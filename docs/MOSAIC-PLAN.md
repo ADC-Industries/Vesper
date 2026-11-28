@@ -161,7 +161,8 @@ its file again only when its path changes (the IDN maintainers' answer,
 `2026-11-26-display-replaced-logo-pickup.md`), so a new logo goes under the name the box's
 screens **don't** show, replacing what the box had under it once the new one is whole and
 checked. The sending Node's transfer goes `offered` → `sent` (the box fetched all of it) or
-`failed`; Vesper follows it (the Node's `<media>` transfers) and, once it is `sent`, points each of
+`failed: <why>` (since IDN Beta21 also `failed: interrupted` for one that ended without a
+result, the box or its connection gone: a failure like any other); Vesper follows it (the Node's `<media>` transfers) and, once it is `sent`, points each of
 the box's screens at it as its own fallback logo (`settings.fallback.logo` = `logo-b.png`,
 relative to the box's media folder): the new path makes a screen showing the logo show the new
 one at once. Until then the screens keep the old name (and picture), also after a transfer that

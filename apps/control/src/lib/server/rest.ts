@@ -1,6 +1,8 @@
 // Typed REST helpers over /api/v1 (crates/protocol/README.md, "REST").
 
 import type {
+  CcliLicense,
+  CcliLicenseStatus,
   ChordProParse,
   ChordProParsed,
   SongSelectParse,
@@ -373,6 +375,9 @@ export class RestClient {
   translatePreview = (req: TranslatePreview) => this.request<TranslateJob>("POST", "/translate/preview", req);
   translateJob = (id: string) => this.get<TranslateJob>(`/translate/jobs/${encodeURIComponent(id)}`);
   cancelTranslateJob = (id: string) => this.request<void>("DELETE", `/translate/jobs/${encodeURIComponent(id)}`);
+  // Settings ▸ CCLI: the church's licence number and where the copyright line shows (PUT: admins).
+  ccliSettings = () => this.get<CcliLicenseStatus>("/settings/ccli");
+  saveCcliSettings = (s: CcliLicense) => this.request<CcliLicenseStatus>("PUT", "/settings/ccli", s);
   // Control surfaces: the Remote API compatibility layer (capability `remoteCompat`).
   remoteCompat = () => this.get<RemoteCompatStatus>("/remote-compat");
   saveRemoteCompat = (change: UpdateRemoteCompat) => this.request<RemoteCompatStatus>("PUT", "/remote-compat", change);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LauncherEntry, LauncherProduct } from "$protocol";
-import { addVersion, attentionCount, byProduct, bytes, githubLine, packageSource, productName, queuedAdds, roleLabel, canAct, healthLine, outcomeText, pendingFor, platformLabel, seenAgo, sourcesText, stateLabel, stateTone, updateFor } from "./updates";
+import { addVersion, attentionCount, broughtIn, byProduct, failedAdds, bytes, githubLine, packageSource, productName, queuedAdds, roleLabel, canAct, healthLine, outcomeText, pendingFor, platformLabel, seenAgo, sourcesText, stateLabel, stateTone, updateFor } from "./updates";
 
 const product = (p: Partial<LauncherProduct> = {}): LauncherProduct => ({ product: "vesper", name: "Vesper", version: "0.1.0", state: "running", restarts: 0, ...p });
 const entry = (e: Partial<LauncherEntry> = {}, p: Partial<LauncherProduct> = {}): LauncherEntry => ({
@@ -65,6 +65,30 @@ describe("Site ▸ Updates words", () => {
       ["vesper", 2],
       ["oriel", 1],
     ]);
+  });
+
+  it("says why an Add app failed, until it is queued again or installed", () => {
+    const failed = { product: "vesper-oriel", name: "Vesper Oriel", outcome: { to: "0.2.0", result: "failed" as const, message: "apt couldn't install it (exit status: 100): E: Unable to correct problems", at: "2026-11-27T10:00:00Z" } };
+    const e = entry({}, {});
+    e.report.failedInstalls = [failed];
+    expect(failedAdds(e).map((f) => f.text)).toEqual(["Adding Vesper Oriel 0.2.0 failed: apt couldn't install it (exit status: 100): E: Unable to correct problems"]);
+    expect(attentionCount([e])).toBe(1);
+    const rolled = entry();
+    rolled.report.failedInstalls = [{ ...failed, outcome: { ...failed.outcome, result: "rolledBack", message: "" } }];
+    expect(failedAdds(rolled)[0]!.text).toBe("Adding Vesper Oriel 0.2.0 failed: it didn't come up healthy and was taken out again");
+    const again = entry({ pending: [{ type: "install", product: "vesper-oriel", version: "0.2.0" }] });
+    again.report.failedInstalls = [failed];
+    expect(failedAdds(again)).toEqual([]);
+    const installed = entry({}, { product: "vesper-oriel", name: "Vesper Oriel", version: "0.2.0" });
+    installed.report.failedInstalls = [failed];
+    expect(failedAdds(installed)).toEqual([]);
+    expect(failedAdds(entry())).toEqual([]);
+  });
+
+  it("names what was brought in from GitHub", () => {
+    expect(broughtIn("vesper-idn-node 0.3.8 for linux-x86_64")).toBe("IDN Node (bundled) 0.3.8 for Linux (x86_64)");
+    expect(broughtIn("vesper-oriel 0.1.0 for windows-x86_64")).toBe("Vesper Oriel 0.1.0 for Windows (x86_64)");
+    expect(broughtIn("something else")).toBe("something else");
   });
 
   it("words Add app and the GitHub check", () => {

@@ -12,13 +12,13 @@ After=network-online.target
 
 [Service]
 Type=exec
-# Root: it installs packages (dpkg -i) and starts and stops the products' units.
+# Root: it installs packages (apt-get install ./<pkg>.deb) and starts and stops the products' units.
 ExecStart=/usr/bin/vesper-launcher --config /etc/vesper/launcher.json
 StateDirectory=vesper-launcher
 StateDirectoryMode=0700
 Restart=on-failure
 RestartSec=5
-# An install it started (dpkg) finishes even when the Launcher itself stops or restarts
+# An install it started (apt, dpkg) finishes even when the Launcher itself stops or restarts
 # meanwhile; the Launcher finishes the update at its next start (docs/LAUNCHER-PLAN.md).
 KillMode=process
 TimeoutStopSec=20

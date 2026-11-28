@@ -138,7 +138,21 @@ pub async fn run_action(
             update_fetched(l, product, &version).await
         }
         LauncherAction::Install { product, version } => {
-            let added = crate::github::prepare_add(l, product)?;
+            l.clear_failed_add(product);
+            let failed = |message: String| UpdateOutcome {
+                from: None,
+                to: version.clone(),
+                result: protocol::UpdateResult::Failed,
+                message,
+                at: crate::launcher::now(),
+            };
+            let added = match crate::github::prepare_add(l, product) {
+                Ok(a) => a,
+                Err(e) => {
+                    l.record_failed_add(product, failed(e.to_string()));
+                    return Err(e);
+                }
+            };
             let r = async {
                 let version = fetch(l, product, version).await?;
                 update_fetched(l, product, &version).await
@@ -146,6 +160,15 @@ pub async fn run_action(
             .await;
             if added && !matches!(&r, Ok(o) if o.result == protocol::UpdateResult::Installed) {
                 l.forget_added(product);
+            }
+            // Reported with its reason (a product whose first install failed isn't managed
+            // here any more, so its own outcome isn't).
+            match &r {
+                Ok(o) if o.result != protocol::UpdateResult::Installed => {
+                    l.record_failed_add(product, o.clone())
+                }
+                Err(e) => l.record_failed_add(product, failed(e.to_string())),
+                Ok(_) => {}
             }
             r
         }

@@ -68,14 +68,14 @@ service's local API. Servers have no tray: the same service reports to the site,
 |---|---|---|---|
 | Package | the existing `.deb` | the existing NSIS `setup.exe` | one executable |
 | Launcher runs as | root, `vesper-launcher.service` | SYSTEM, scheduled task "Vesper Launcher" | the user |
-| Install | `dpkg -i` (postinst restarts the enabled unit) | `setup.exe /S` (options kept from the registry) | versioned folder, Launcher-supervised process |
+| Install | `apt-get install ./<pkg>.deb` (dependencies from the repositories; postinst restarts the enabled unit) | `setup.exe /S` (options kept from the registry) | versioned folder, Launcher-supervised process |
 | Restart on crash | systemd (`Restart=`), counted via `NRestarts` | the task's one-minute trigger | the Launcher, back-off 1 s → 60 s |
 | Kept | `/var/lib/vesper-launcher/packages/<product>/<version>/` | `%ProgramData%\Vesper Launcher\packages\…` | the same, under its state folder |
 
 An update: verify signature and trusted comment (product, platform) → store → install → wait for
 **health** (the product's `GET /api/v1/server` answers 200 with the new version within 60 s) →
 done, and older packages beyond the previous one are pruned. If health fails, the Launcher
-**reinstalls the previous version automatically** (`dpkg -i` downgrades, the previous setup.exe,
+**reinstalls the previous version automatically** (apt with `--allow-downgrades`, the previous setup.exe,
 the previous folder) and waits for it to be healthy again; the outcome (`installed`,
 `rolledBack` with the reason, `failed`) is reported. "Roll back" by hand does the same with the
 kept previous version (for the Launcher itself, through its self-update helper, as an update). The update in progress (`from`, `to`) is saved in the manifest before the
@@ -83,7 +83,7 @@ installer runs and cleared with the outcome: a Launcher stopped in between (a re
 cut during the health wait) finds it at its next start, checks the new version again and keeps
 it or puts the one before back, so the manifest never names a version that isn't installed.
 A `.deb` install the stopped Launcher started may still be running then (`KillMode=process`):
-the Launcher waits for dpkg's lock (any `dpkg -i` it runs does, up to 15 minutes) and only
+the Launcher waits for dpkg's lock (any install it runs does, up to 15 minutes) and only
 checks a new version dpkg already installed instead of installing it again. A product
 installed outside the Launcher (apt, the Windows installer) is adopted: dpkg's installed
 version for a `.deb`, else the version its health check reports (also over a version the
@@ -303,17 +303,19 @@ package is refused and removed.
   run and doesn't have: a package for its platform, not the Launcher or its tray (they come with
   the Launcher), no Vesper server on a display box, and what the Launcher knows how to install
   there (`github::template`: the server as `.deb` or NSIS, the bundled IDN Node and Oriel as
-  `.deb` packages of programs; Oriel's Windows installer installs per user, so the Launcher,
-  running as SYSTEM, doesn't offer it on Windows). In the Launcher's window: Add app → pick → it
+  `.deb` packages of programs; Oriel's Windows installer now installs per machine, but the
+  Launcher can't yet tell which version of a Windows program without a health check is
+  installed, so it doesn't offer Oriel on Windows: it is installed by hand there). In the Launcher's window: Add app → pick → it
   downloads (the church server if it has the package, else GitHub), verifies, installs, and
   manages the product from then on (`added-products.json` in its state folder; a product whose
   first install failed is forgotten again). In Oriel: "Add app to <machine>…" queues an
   `install` action for the machine's Launcher; a version only GitHub has is brought into the
   channel at once.
 
-Not covered here: `dpkg -i` doesn't fetch a package's system dependencies from apt, so adding the
-Vesper server to a machine without FFmpeg's libraries fails (as an update would) and says so;
-the first real release (the owner decides when) and a real download from github.com.
+Packages are installed with apt (`apt-get install ./<pkg>.deb`, non-interactive, never removing
+a package), so adding the Vesper server to a machine without FFmpeg's libraries brings them from
+the repositories; offline, it fails with apt's reason (trimmed to its errors and the unmet
+dependency) and the previous version is put back. Not covered here: the first real release (the owner decides when) and a real download from github.com.
 
 ## Deferred (said so in Oriel where it matters)
 

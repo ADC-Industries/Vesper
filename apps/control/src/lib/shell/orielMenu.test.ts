@@ -75,6 +75,7 @@ describe("Oriel menu", () => {
     ]);
     for (const i of settings) if (!i.disabled) expect(i.run).toBeTruthy();
     expect(settings.find((i) => i.id === "s-labels")?.note).toBe(LATER);
+    expect(settings.find((i) => i.id === "s-ccli")?.note).toBeUndefined();
   });
 
   it("checks the current page and disables pages the server can't show", () => {

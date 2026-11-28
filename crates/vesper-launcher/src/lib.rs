@@ -11,7 +11,7 @@
 //! - [`sign`]: Ed25519 signatures in minisign's format; the compiled-in release keys.
 //! - [`package`]: a package's signed product, version and platform.
 //! - [`launcher`]: manifest, package store, update and rollback, health, report.
-//! - [`install`]: `dpkg -i`, the silent NSIS installer, or a supervised folder install.
+//! - [`install`]: apt (`apt-get install ./<pkg>.deb`), the silent NSIS installer, or a supervised folder install.
 //! - [`health`]: product health checks and the machine's numbers.
 //! - [`api`]: the local API on loopback.
 //! - [`channel`]: the site's update channel client and the report loop.

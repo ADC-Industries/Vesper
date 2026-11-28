@@ -17,6 +17,7 @@
 //   don't edit the same file). Every file there default-exports `async (ctx) => {}`; it starts on
 //   the Show page (playlist open, a presentation selected) and goes back there afterwards (Ctrl+S).
 //   `ctx`: `page` (Playwright), `w`, `h`, `stub`, `shot(name)` (writes `<w>-<name>.png`),
+//   `shotOf(otherPage, name)`,
 //   `settle(ms)`, `esc()`, `step(label, fn)` and `openPage(name)` (clicks a header page button).
 
 import { execSync } from "node:child_process";
@@ -179,6 +180,8 @@ for (const [w, h] of SIZES) {
     h,
     stub,
     shot: (name) => shot(page, w, name),
+    // Another tab's shot (a page's own tab, e.g. with a stand-in for the desktop shell).
+    shotOf: (p, name) => shot(p, w, name),
     settle: (ms) => settle(page, ms),
     esc,
     step,

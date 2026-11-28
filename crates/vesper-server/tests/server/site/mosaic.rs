@@ -1941,7 +1941,8 @@ async fn the_logo_is_pushed_and_the_display_service_switched() {
             "screen {n} keeps the old logo until the new one is there"
         );
     }
-    *nodes.transfer_state.lock().unwrap() = Some("failed: the stream stopped".into());
+    // (IDN Beta21: a transfer that ended without a result, the box or its connection gone.)
+    *nodes.transfer_state.lock().unwrap() = Some("failed: interrupted".into());
     until_state(addr, "the failed transfer shown", |s| {
         s["boxes"][0]["logoState"] == "failed"
     })

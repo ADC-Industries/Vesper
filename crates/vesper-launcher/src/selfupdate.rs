@@ -5,7 +5,7 @@
 //! systemd unit, `systemd-run`; Windows: a one-time scheduled task as SYSTEM, "Vesper Launcher
 //! Update"). The helper:
 //!
-//! 1. installs the new package (`dpkg -i`, or the setup `/S`, which ends the Launcher's task);
+//! 1. installs the new package (`apt-get install ./<pkg>.deb`, or the setup `/S`, which ends the Launcher's task);
 //! 2. restarts the Launcher (`systemctl restart vesper-launcher`; Windows: runs its task);
 //! 3. waits for the Launcher's health check (`GET /launcher/v1/version` answering the new
 //!    version) for the health timeout;

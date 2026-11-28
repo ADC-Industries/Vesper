@@ -185,7 +185,7 @@ export function orielMenu(c: OrielMenuContext): MenuDef[] {
         item("s-streaming", "Recording & Streaming…", { run: () => c.act.settings("Streaming") }),
         item("s-media", "Media Preparation…", { run: () => c.act.settings("Media") }),
         later("s-labels", "Slide Labels…"),
-        later("s-ccli", "Licenses (CCLI)…"),
+        item("s-ccli", "Licenses (CCLI)…", { run: () => c.act.settings("Ccli") }),
         sep,
         later("updates", "Check for Updates…"),
       ],

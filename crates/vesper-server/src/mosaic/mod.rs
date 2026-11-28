@@ -528,6 +528,27 @@ pub const LOGO_SETTLE: Duration = Duration::from_secs(15);
 /// transfers of one name never run at once).
 const LOGO_STUCK: Duration = Duration::from_secs(120);
 
+/// Why a transfer's state (`Transfer::state`) says it ended without the file arriving, as
+/// shown: `refused`, `failed: <why>` (IDN Beta21: `failed: interrupted` for one that ended
+/// without a result, its sender or the box gone meanwhile); `None` while it goes or once `sent`.
+fn transfer_failed(state: &str) -> Option<String> {
+    match state {
+        "refused" => Some("the box refused it".into()),
+        "failed: interrupted" => Some("the transfer was interrupted".into()),
+        s => s
+            .strip_prefix("failed")
+            .map(|why| why.trim_start_matches(':').trim())
+            .map(|why| {
+                if why.is_empty() {
+                    "the transfer failed"
+                } else {
+                    why
+                }
+                .to_string()
+            }),
+    }
+}
+
 /// Whether an IDN Node of build `version` (`0.3.4-Beta14 …`, as its report says) takes
 /// `media_send replace="true"` (Beta14 and later); `None`: not known.
 fn takes_replace(version: Option<&str>) -> Option<bool> {
@@ -1112,7 +1133,7 @@ impl Mosaic {
         for (fp, offer, at) in pending {
             let seen = self.nodes.transfer(&offer, &fp);
             let state = seen.as_ref().map(|t| t.state.as_str());
-            let failed = state.filter(|s| s.starts_with("failed") || *s == "refused");
+            let failed = state.and_then(transfer_failed);
             let still = Progress::observe(
                 &mut lock(&self.logo_push).progress,
                 &fp,
@@ -3224,6 +3245,31 @@ mod tests {
         }
         assert!(!on(None));
         assert!(!on(Some(" ")));
+    }
+
+    /// A transfer's end as shown: IDN Beta21's `failed: interrupted` (one that ended without a
+    /// result) is a failure like any other, tried again; still going or sent is none.
+    #[test]
+    fn transfer_failures_as_shown() {
+        assert_eq!(
+            transfer_failed("failed: interrupted").as_deref(),
+            Some("the transfer was interrupted")
+        );
+        assert_eq!(
+            transfer_failed("failed: the stream stopped").as_deref(),
+            Some("the stream stopped")
+        );
+        assert_eq!(
+            transfer_failed("failed").as_deref(),
+            Some("the transfer failed")
+        );
+        assert_eq!(
+            transfer_failed("refused").as_deref(),
+            Some("the box refused it")
+        );
+        for going in ["offered", "sent", ""] {
+            assert_eq!(transfer_failed(going), None, "{going}");
+        }
     }
 
     /// H01-1 (bug run 6): a tile-only command (or a screen leaving a wall) sent with the site's

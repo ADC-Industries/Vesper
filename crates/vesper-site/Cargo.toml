@@ -10,8 +10,8 @@ vesper-core = { path = "../vesper-core" }
 protocol = { path = "../protocol" }
 # The site's Site Manager, embedded, and the trust types it is driven with (JoinMode, the
 # authority's requests, devices and alerts).
-idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
-idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
+idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
 anyhow = "1.0.104"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"

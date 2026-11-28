@@ -20,6 +20,20 @@ fn machine(m: &host::DeviceMachine, reported: Option<u64>) -> protocol::SiteDevi
     }
 }
 
+/// When a machine was last seen (seconds since 1970) for `lastSeen`: now while it is `online`
+/// (connected to the Site Manager, as the Site Manager judges it), else the newer of this
+/// server's own record (`ours`, kept across restarts) and its Node's last report (`reported`).
+/// Never judged from how old the Node's last report is: since IDN Beta21 a Node's live figures
+/// (uptime, CPU, clock, `last_seen`) refresh only about every 10 s, so a report up to a few
+/// pushes old is normal for a machine online.
+fn seen_at(online: bool, ours: Option<u64>, reported: Option<u64>, now: u64) -> Option<u64> {
+    if online {
+        Some(now)
+    } else {
+        ours.max(reported)
+    }
+}
+
 impl Site {
     /// `GET /api/v1/site/devices`: every machine of the site (removed ones last), with its
     /// health as the Site Manager sees it.
@@ -70,13 +84,12 @@ impl Site {
                 } else {
                     DeviceHealth::Online
                 };
-                // Connected or reported, whichever is newer (ours is kept across restarts).
-                let seen = st
-                    .stored
-                    .last_seen
-                    .get(&d.fingerprint)
-                    .copied()
-                    .max(hh.and_then(|x| x.last_seen));
+                let seen = seen_at(
+                    online,
+                    st.stored.last_seen.get(&d.fingerprint).copied(),
+                    hh.and_then(|x| x.last_seen),
+                    now,
+                );
                 let version = hh.and_then(|x| x.version.clone());
                 SiteDevice {
                     fingerprint: d.fingerprint.clone(),
@@ -91,7 +104,7 @@ impl Site {
                         .then(|| problems.first().map(|p| p.text.clone()))
                         .flatten(),
                     problems,
-                    last_seen: if online { Some(now) } else { seen }.map(rfc3339),
+                    last_seen: seen.map(rfc3339),
                     node: version.is_some() || hh.is_some_and(|x| x.last_seen.is_some()),
                     version,
                     restarting,
@@ -335,5 +348,26 @@ mod tests {
         // An empty report: nothing but the time it came.
         let none = machine(&host::DeviceMachine::default(), None);
         assert_eq!(none, protocol::SiteDeviceMachine::default());
+    }
+
+    /// A machine online is seen now, however old its Node's last report (IDN Beta21: the live
+    /// figures refresh about every 10 s; three pushes, 30 s, is still nothing unusual); offline,
+    /// the newer of ours and the Node's report.
+    #[test]
+    fn last_seen_follows_the_connection_not_the_reports_age() {
+        let now = 1_800_000_000;
+        for age in [0, 10, 25, 30, 45] {
+            assert_eq!(super::seen_at(true, None, Some(now - age), now), Some(now));
+        }
+        assert_eq!(super::seen_at(true, None, None, now), Some(now));
+        assert_eq!(
+            super::seen_at(false, Some(now - 600), Some(now - 40), now),
+            Some(now - 40)
+        );
+        assert_eq!(
+            super::seen_at(false, Some(now - 5), Some(now - 40), now),
+            Some(now - 5)
+        );
+        assert_eq!(super::seen_at(false, None, None, now), None);
     }
 }

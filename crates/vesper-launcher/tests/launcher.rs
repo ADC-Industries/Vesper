@@ -566,9 +566,9 @@ async fn the_launchers_own_page_works_and_products_start_and_stop() {
     fx.launcher.shutdown().await;
 }
 
-/// A `deb` product with a fake dpkg: `dpkg` logs its call and "installs" the package (a text
-/// file naming its version, and `broken` for one that never becomes healthy), `dpkg-query`
-/// says what is installed, and a health server answers with the installed version.
+/// A `deb` product with a fake apt and dpkg: `apt-get` logs its call and "installs" the package
+/// (a text file naming its version, and `broken` for one that never becomes healthy),
+/// `dpkg-query` says what is installed, and a health server answers with the installed version.
 struct DebFixture {
     _dir: tempfile::TempDir,
     root: PathBuf,
@@ -595,7 +595,7 @@ fn deb_fixture(installed: &str) -> DebFixture {
             ),
         ),
         (
-            "dpkg",
+            "apt-get",
             format!(
                 "#!/bin/sh\necho \"$DEBIAN_FRONTEND $*\" >> '{db_s}/calls'\nfor a; do pkg=$a; done\nsed -n 's/^version=//p' \"$pkg\" | tr -d '\\n' > '{db_s}/installed'\nif grep -q broken \"$pkg\"; then touch '{db_s}/down'; else rm -f '{db_s}/down'; fi\n"
             ),
@@ -644,7 +644,7 @@ fn deb_fixture(installed: &str) -> DebFixture {
             "healthUrl": format!("http://127.0.0.1:{port}/api/v1/server"),
         }],
         "dpkg": {
-            "program": bin.join("dpkg"),
+            "apt": bin.join("apt-get"),
             "query": bin.join("dpkg-query"),
             "adminDir": db,
             "lockTimeoutSecs": 20,
@@ -728,7 +728,7 @@ async fn an_apt_installed_server_is_adopted_and_only_updated_to_newer_versions()
         let e = l.update("vesper", v).await.unwrap_err();
         assert!(e.to_string().contains(why), "{v}: {e}");
     }
-    assert_eq!(fx.calls(), "", "dpkg never ran");
+    assert_eq!(fx.calls(), "", "apt never ran");
 
     // The page: Launch works for it (`deb`); an update is offered until it is installed.
     l.reported(None, Some(l.newer(&with_newer)));
@@ -746,8 +746,11 @@ async fn an_apt_installed_server_is_adopted_and_only_updated_to_newer_versions()
     );
     let calls = fx.calls();
     assert!(
-        calls.starts_with("noninteractive --force-confdef --force-confold -i "),
-        "an edited configuration file is kept, never asked about: {calls}"
+        calls.starts_with(
+            "noninteractive install -y -q --allow-downgrades --no-remove \
+             -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold /"
+        ),
+        "with apt, an edited configuration file kept, never asked about, nothing removed: {calls}"
     );
     let ov = serde_json::to_value(l.overview()).unwrap();
     assert!(
@@ -808,7 +811,7 @@ async fn a_package_needing_a_newer_launcher_is_installed_with_it() {
         ),
     );
     script(
-        &bin.join("dpkg"),
+        &bin.join("apt-get"),
         &format!(
             "#!/bin/sh\necho \"$*\" >> '{db_s}/calls'\nfor a; do case $a in *.deb) n=$(sed -n 's/^name=//p' \"$a\"); v=$(sed -n 's/^version=//p' \"$a\" | tr -d '\\n'); if [ -z \"$n\" ]; then printf %s \"$v\" > '{db_s}/installed'; else printf %s \"$v\" > '{db_s}/installed-'$n; fi;; esac; done\n"
         ),
@@ -872,7 +875,7 @@ async fn a_package_needing_a_newer_launcher_is_installed_with_it() {
     let o = l.update("vesper", "0.4.0-1").await.unwrap();
     assert_eq!(o.result, UpdateResult::Installed, "{}", o.message);
     let calls = fx.calls();
-    assert_eq!(calls.lines().count(), 1, "one dpkg run: {calls}");
+    assert_eq!(calls.lines().count(), 1, "one apt run: {calls}");
     assert!(
         calls.contains("vesper-launcher_0.2.0-1_amd64.deb")
             && calls.trim_end().ends_with("vesper_0.4.0-1_amd64.deb"),
@@ -939,6 +942,109 @@ async fn a_failed_first_update_goes_back_with_apts_package_or_says_why_not() {
     );
 }
 
+/// apt can't install a package (a system package it needs isn't available): the update fails
+/// with apt's reason, trimmed to its errors and the unmet dependency (not its progress lines),
+/// and the installed version is put back.
+#[tokio::test(flavor = "multi_thread")]
+async fn an_apt_failure_says_why_and_the_installed_version_is_put_back() {
+    let fx = deb_fixture("0.3.0-1");
+    let db = fx.root.join("dpkg");
+    let db_s = db.display();
+    // A package with `unmet` in it: apt explains on stdout and stderr and installs nothing.
+    let mut noise = String::new();
+    for i in 0..40 {
+        noise.push_str(&format!("echo 'Reading package lists... step {i}'\n"));
+    }
+    script(
+        &fx.root.join("bin/apt-get"),
+        &format!(
+            "#!/bin/sh\necho \"$*\" >> '{db_s}/calls'\nfor a; do pkg=$a; done\n\
+             if grep -q unmet \"$pkg\"; then\n{noise}\
+             echo 'The following packages have unmet dependencies:'\n\
+             echo ' vesper : Depends: libexample-synthetic9 but it is not going to be installed'\n\
+             echo 'E: Unable to correct problems, you have held broken packages.' >&2\n\
+             exit 100\nfi\n\
+             sed -n 's/^version=//p' \"$pkg\" | tr -d '\\n' > '{db_s}/installed'\nrm -f '{db_s}/down'\n"
+        ),
+    );
+    let l = Launcher::open(fx.cfg.clone()).unwrap();
+    fx.deb(&fx.root.join("apt"), "0.3.0-1", true);
+    let path = fx.root.join("build/vesper_0.4.0-1_amd64.deb");
+    std::fs::write(&path, "version=0.4.0-1\nunmet\n").unwrap();
+    let meta = PackageMeta {
+        product: "vesper".into(),
+        version: "0.4.0-1".into(),
+        platform: this_platform(),
+    };
+    let sig = fx
+        .signer
+        .sign(&Hasher::file(&path).unwrap(), &meta.comment());
+    l.add_package(&path, "vesper_0.4.0-1_amd64.deb", &sig)
+        .unwrap();
+    let o = l.update("vesper", "0.4.0-1").await.unwrap();
+    assert_eq!(o.result, UpdateResult::RolledBack, "{}", o.message);
+    assert!(
+        o.message.contains("apt couldn't install it")
+            && o.message.contains(
+                "vesper : Depends: libexample-synthetic9 but it is not going to be installed"
+            )
+            && o.message.contains("E: Unable to correct problems"),
+        "{}",
+        o.message
+    );
+    assert!(
+        !o.message.contains("Reading package lists"),
+        "{}",
+        o.message
+    );
+    assert!(o.message.len() < 1200, "trimmed: {}", o.message.len());
+    assert_eq!(fx.installed(), "0.3.0-1");
+    let calls = fx.calls();
+    assert_eq!(
+        calls.lines().count(),
+        2,
+        "the update, then the way back: {calls}"
+    );
+    assert!(
+        calls
+            .lines()
+            .last()
+            .unwrap()
+            .ends_with("apt/vesper_0.3.0-1_amd64.deb"),
+        "{calls}"
+    );
+}
+
+/// A package apt can't find in its out-of-date package lists: the lists are refreshed once
+/// (`apt-get update`) and the install is tried again.
+#[tokio::test(flavor = "multi_thread")]
+async fn apt_refreshes_its_package_lists_once_when_a_dependency_cant_be_fetched() {
+    let fx = deb_fixture("0.3.0-1");
+    let db = fx.root.join("dpkg");
+    let db_s = db.display();
+    script(
+        &fx.root.join("bin/apt-get"),
+        &format!(
+            "#!/bin/sh\necho \"$*\" >> '{db_s}/calls'\n\
+             if [ \"$1\" = update ]; then touch '{db_s}/lists'; exit 0; fi\n\
+             for a; do pkg=$a; done\n\
+             if [ ! -e '{db_s}/lists' ]; then\n\
+             echo 'E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?' >&2\n\
+             exit 100\nfi\n\
+             sed -n 's/^version=//p' \"$pkg\" | tr -d '\\n' > '{db_s}/installed'\nrm -f '{db_s}/down'\n"
+        ),
+    );
+    let l = Launcher::open(fx.cfg.clone()).unwrap();
+    fx.add(&l, "0.4.0-1", true);
+    let o = l.update("vesper", "0.4.0-1").await.unwrap();
+    assert_eq!(o.result, UpdateResult::Installed, "{}", o.message);
+    assert_eq!(fx.installed(), "0.4.0-1");
+    let calls: Vec<String> = fx.calls().lines().map(str::to_string).collect();
+    assert_eq!(calls.len(), 3, "{calls:?}");
+    assert!(calls[0].starts_with("install ") && calls[2].starts_with("install "));
+    assert_eq!(calls[1], "update -q");
+}
+
 /// Holds dpkg's lock (a write record lock on `lock-frontend`, as dpkg takes it) until the file
 /// is dropped. An open-file-description lock: a process's classic record lock would be
 /// released when the Launcher, in this same process, closes the file after asking.
@@ -963,7 +1069,7 @@ fn hold_dpkg_lock(admin_dir: &Path) -> std::fs::File {
 
 /// The Launcher restarted while the dpkg of its update kept running (its unit's
 /// `KillMode=process`): at its start it waits for that dpkg, then only checks the version it
-/// installed (no second `dpkg -i`, no rollback over it).
+/// installed (no second install, no rollback over it).
 #[tokio::test(flavor = "multi_thread")]
 async fn an_interrupted_deb_update_waits_for_its_dpkg_and_keeps_what_it_installed() {
     let fx = deb_fixture("0.3.0-1");
@@ -997,7 +1103,7 @@ async fn an_interrupted_deb_update_waits_for_its_dpkg_and_keeps_what_it_installe
     l.start_products().await;
     orphan.join().unwrap();
     assert!(started.elapsed() >= std::time::Duration::from_millis(1400));
-    assert_eq!(fx.calls(), "", "no second dpkg -i");
+    assert_eq!(fx.calls(), "", "no second install");
     let i = l.installed("vesper");
     assert_eq!(
         (i.version.as_deref(), i.previous.as_deref()),
@@ -1645,7 +1751,7 @@ async fn the_launchers_self_update_helper_keeps_a_healthy_version_and_goes_back_
                 "healthUrl": health,
             }],
             "dpkg": {
-                "program": fx.root.join("bin/dpkg"),
+                "apt": fx.root.join("bin/apt-get"),
                 "query": fx.root.join("bin/dpkg-query"),
                 "adminDir": fx.root.join("dpkg"),
                 "lockTimeoutSecs": 20,
@@ -1747,7 +1853,8 @@ async fn the_launchers_own_rollback_goes_through_the_self_update_helper() {
 
 /// Products come from `launcher.d/*.json` too (the server's package adds itself there); one in
 /// the main file wins over a file of the same ID. Without roles chosen or configured, a machine
-/// with the server is reported as a presentation server; without it, it has no role.
+/// with the server is reported as a presentation server; without it, it has no role. A file
+/// that appears later is picked up by the running Launcher.
 #[test]
 fn products_come_from_the_configuration_and_its_folder() {
     let dir = tempfile::tempdir().unwrap();
@@ -1782,6 +1889,14 @@ fn products_come_from_the_configuration_and_its_folder() {
     assert_eq!(c.path.as_deref(), Some(main.as_path()));
     let l = Launcher::open(c).unwrap();
     assert_eq!(l.roles(), ["presentation"]);
+    // A product file that appeared while the Launcher ran (a package installed since, or
+    // configured after the Launcher's own): managed from the next check, once.
+    alone.pick_up_product_files();
+    alone.pick_up_product_files();
+    let ids: Vec<String> = alone.products().into_iter().map(|p| p.product).collect();
+    assert_eq!(ids, ["vesper-launcher", "vesper"]);
+    assert_eq!(alone.report().products.len(), 2);
+    assert_eq!(alone.roles(), ["presentation"]);
 }
 
 // ---- Releases from GitHub: the direct mode and "Add app" (a fake GitHub, a throwaway key) ----
@@ -2013,6 +2128,23 @@ async fn add_app_installs_a_product_this_machine_can_run() {
         .await
         .unwrap_err();
     assert!(e.to_string().contains("can't be added"), "{e}");
+    // The refused adds are reported with their reasons (newest first), so Oriel can say why;
+    // not the one of a product managed here.
+    let failed = l.report().failed_installs;
+    let got: Vec<(&str, &str)> = failed
+        .iter()
+        .map(|f| (f.product.as_str(), f.name.as_str()))
+        .collect();
+    assert_eq!(
+        got,
+        [("vesper-launcher", "Vesper Launcher"), ("vesper", "Vesper")]
+    );
+    assert_eq!(failed[1].outcome.result, UpdateResult::Failed);
+    assert_eq!(failed[1].outcome.to, "0.2.0");
+    assert!(
+        failed[1].outcome.message.contains("display box"),
+        "{failed:?}"
+    );
     // Kept across a restart.
     l.shutdown().await;
     let again = Launcher::open(cfg).unwrap();

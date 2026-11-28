@@ -11,9 +11,9 @@ log = "0.4.34"
 # FFmpeg comes from the system (apt), linked dynamically through pkg-config: never vendored,
 # never built from source, never static (see ARCHITECTURE.md, "Media dependency policy").
 # IDN's FFmpeg adapter (same system FFmpeg, decode-only: no capture/WHEP/voice extras).
-idn-ffmpeg = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }
+idn-ffmpeg = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21", default-features = false }
 # The codec named in a file conversion (`idn_ffmpeg::media::ConvertConfig::codec`).
-idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
 
 [dev-dependencies]
 render = { path = "../render" }

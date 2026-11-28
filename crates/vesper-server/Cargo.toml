@@ -30,22 +30,22 @@ output = { path = "../output" }
 media = { path = "../media" }
 audio = { path = "../audio" }
 # The site's Site Manager (run by `vesper-site`) and the IDN library's types the Codex uses.
-idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
-idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-site-manager = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
+idn-open-protocol = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
 # Live captions (docs/CAPTIONS-PLAN.md): whisper.cpp in IDN's captions worker process (the
 # `vesper` binary). On the GPU through Vulkan with the crate's `gpu` feature: on Linux always
 # (below), elsewhere with this crate's `gpu-captions` feature (building it needs the Vulkan
 # headers and glslc). whisper's Vulkan instance lives in the worker, never in the server.
-idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }
+idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21", default-features = false }
 # Recording and streaming (`gateways`): IDN's FFmpeg gateway (the system FFmpeg the media
 # crate links anyway; also the live-source tests' H.264 test source).
-idn-ffmpeg = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false }
+idn-ffmpeg = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21", default-features = false }
 # Mosaic's checked HTTPS to display boxes (`mosaic::client`): IDN's `lan_client_config` is a
 # rustls client config; the same rustls (and features) the IDN library uses.
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 # Signage's data feeds (`signage::feeds`): IDN's feed reader (Google Sheets, CSV/TSV, JSON,
 # XML/RSS); it turns on the IDN library's HTTP client, which also reads the weather.
-idn-feeds = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18" }
+idn-feeds = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21" }
 anyhow = "1.0.104"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
@@ -81,7 +81,7 @@ libc = "0.2.191"
 drm = "0.15"
 # Captions on the GPU on Linux (Vulkan: `libvulkan-dev` and `glslc` to build; at run time the
 # Vulkan loader the renderer already needs). A box without a Vulkan GPU runs whisper on the CPU.
-idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta18", default-features = false, features = ["gpu"] }
+idn-captions = { git = "https://github.com/ADC-Industries/idn-open-protocol", tag = "v0.3.8-Beta21", default-features = false, features = ["gpu"] }
 
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
 # Display outputs as windows (Windows, Linux desktops): one event loop thread, a window per

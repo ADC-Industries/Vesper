@@ -1,6 +1,6 @@
 [package]
 name = "vesper-launcher"
-version = "0.1.0"
+version = "0.1.1"
 edition.workspace = true
 license.workspace = true
 description = "Vesper Launcher: installs, updates (signed, with automatic rollback), starts and monitors the Vesper products on a machine; its local API; minisign-compatible package signatures"

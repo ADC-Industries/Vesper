@@ -16,7 +16,9 @@ use crate::install::{self, Supervisor};
 use crate::package::{self, Verified};
 use crate::setup::{JoinState, PairAnswer, SetupFile, SiteKey};
 use crate::sign::{self, Hasher, PublicKey};
-use protocol::{LauncherProduct, LauncherReport, ProductState, UpdateOutcome, UpdateResult};
+use protocol::{
+    FailedInstall, LauncherProduct, LauncherReport, ProductState, UpdateOutcome, UpdateResult,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -26,6 +28,8 @@ use std::time::{Duration, Instant};
 
 /// Products added on this machine ("Add app"), in the state folder.
 pub const ADDED_FILE: &str = "added-products.json";
+/// Most failed "Add app" installs reported.
+const MAX_FAILED_ADDS: usize = 8;
 
 /// The signature file next to a stored package.
 pub const SIGNATURE_FILE: &str = "package.minisig";
@@ -112,6 +116,12 @@ pub struct Launcher {
     /// Products added on this machine ("Add app", `added-products.json`), besides the
     /// configured ones.
     added: Mutex<Vec<ProductConfig>>,
+    /// "Add app" installs that failed, newest first (reported until the product is added
+    /// again).
+    failed_adds: Mutex<Vec<FailedInstall>>,
+    /// Products whose file appeared in `launcher.d` after the Launcher started (a package
+    /// installed since, or configured after the Launcher's own: [`Launcher::pick_up_product_files`]).
+    later: Mutex<Vec<ProductConfig>>,
     keys: Vec<PublicKey>,
     machine_id: String,
     platform: String,
@@ -309,6 +319,8 @@ impl Launcher {
         let l = Arc::new(Launcher {
             cfg,
             added: Mutex::new(added),
+            failed_adds: Mutex::new(Vec::new()),
+            later: Mutex::new(Vec::new()),
             keys,
             machine_id,
             platform,
@@ -871,12 +883,51 @@ impl Launcher {
             .ok_or_else(|| LauncherError::UnknownProduct(product.to_string()))
     }
 
-    /// The products this machine manages: the configured ones, then those added here ("Add
-    /// app").
+    /// The products this machine manages: the configured ones (those whose `launcher.d` file
+    /// appeared later too), then those added here ("Add app").
     pub fn products(&self) -> Vec<ProductConfig> {
         let mut v = self.cfg.products.clone();
+        v.extend(lock(&self.later).iter().cloned());
         v.extend(lock(&self.added).iter().cloned());
         v
+    }
+
+    /// Manages the products whose file appeared in `launcher.d` since the Launcher started
+    /// (blocking: reads the configuration again). A package installed by hand later, or one
+    /// apt configured after the Launcher's own package in the same run, brings its product file
+    /// while the Launcher runs; without this it would be managed only after a restart. A
+    /// configuration that doesn't read is left alone (logged).
+    pub fn pick_up_product_files(&self) {
+        let Some(path) = self.cfg.path.clone() else {
+            return;
+        };
+        let cfg = match Config::load(&path) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::debug!("the product files aren't read again: {e:#}");
+                return;
+            }
+        };
+        for p in cfg.products {
+            if self.product(&p.product).is_ok() {
+                continue;
+            }
+            tracing::info!(
+                "{}: its product file appeared; managed from now on",
+                p.product
+            );
+            lock(&self.runtimes).insert(
+                p.product.clone(),
+                Runtime {
+                    state: ProductState::Stopped,
+                    held: false,
+                    restarts: Arc::new(AtomicU32::new(0)),
+                    supervisor: None,
+                    down_since: None,
+                },
+            );
+            lock(&self.later).push(p);
+        }
     }
 
     /// Manages `p` from now on (added with "Add app"; kept in `added-products.json`).
@@ -900,6 +951,31 @@ impl Launcher {
             },
         );
         Ok(())
+    }
+
+    /// Notes an "Add app" install of `product` that failed (reported with its reason), unless
+    /// the product is managed here (its own last update says it then).
+    pub fn record_failed_add(&self, product: &str, outcome: UpdateOutcome) {
+        if self.product(product).is_ok() {
+            return;
+        }
+        let name = vesper_releases::github::product_name(product);
+        let mut f = lock(&self.failed_adds);
+        f.retain(|x| x.product != product);
+        f.insert(
+            0,
+            FailedInstall {
+                product: product.to_string(),
+                name,
+                outcome,
+            },
+        );
+        f.truncate(MAX_FAILED_ADDS);
+    }
+
+    /// Forgets the failed "Add app" install of `product` (it is being added again).
+    pub fn clear_failed_add(&self, product: &str) {
+        lock(&self.failed_adds).retain(|x| x.product != product);
     }
 
     /// Forgets a product added here whose first install failed (nothing of it is installed).
@@ -1681,6 +1757,8 @@ impl Launcher {
 
     /// Health-checks every product not being updated.
     pub async fn check(&self) {
+        // (A few small files, read at every check.)
+        self.pick_up_product_files();
         let busy = self.busy.try_lock().is_err();
         for p in &self.products() {
             let state = lock(&self.runtimes).get(&p.product).map(|r| r.state);
@@ -1838,6 +1916,7 @@ impl Launcher {
             platform: self.platform.clone(),
             roles: self.roles(),
             products,
+            failed_installs: lock(&self.failed_adds).clone(),
             health: crate::health::machine(&self.cfg.state_dir),
         }
     }

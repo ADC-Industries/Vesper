@@ -113,9 +113,12 @@ whichever of the two units is enabled. On a box with displays that should stay o
 **Smoke test** (`packaging/linux/smoke-test.sh`, podman, never the host): in a clean container of
 the build machine's Ubuntu release, `apt` installs the `.deb` with its dependencies, `vesper
 --help` runs, the user, groups and data folder exist, `systemd-analyze verify` accepts the unit,
-and nothing in `ldd` is missing. Then a container boots systemd: the service starts by itself
-(Mesa's software renderer, no GPU there), serves the UI and `GET /api/v1/server` on 5555, and
-`apt purge` keeps `/var/lib/vesper`.
+and nothing in `ldd` is missing; under the Launcher's package repacked as 0.1.0, dpkg refuses the
+IDN Node's package and apt installs the two together. Then a container boots systemd (the
+Launcher configured with GitHub checks off, so it makes no network calls of its own): the
+service starts by itself (Mesa's software renderer, no GPU there), serves the UI and `GET
+/api/v1/server` on 5555, the Launcher installs signed packages from its local API, and `apt
+purge` keeps `/var/lib/vesper`.
 
 ## Bible translations
 
@@ -335,8 +338,14 @@ packaging/oriel/build.sh windows    # NSIS installer, cross-built (MinGW-w64 + n
 
 Product name "Vesper Oriel", identifier `org.vesper.oriel`, program `vesper-oriel`. The Linux
 `.deb` depends on WebKitGTK 4.1 and GTK 3 (added by Tauri's bundler); the AppImage carries them.
-The Windows installer installs for the current user (no administrator needed) and uses the
-WebView2 runtime that Windows 10 and 11 already have (it downloads it if missing). It is built
+The Windows installer installs per machine (administrator prompt; `C:\Program Files\Vesper Oriel`,
+Start menu entry for every account), so one install serves every Windows account at the church;
+each account keeps its own settings (its app-data folder). Tauri's `installMode: "perMachine"`,
+plus our hook `apps/control/src-tauri/windows/installer-hooks.nsh`: a per-user install of an
+earlier test build under the installing account (`%LOCALAPPDATA%\Vesper Oriel`) is uninstalled
+silently first, its settings kept; one under another account (elevated with a different
+administrator's password) isn't seen and stays until that account removes it in Settings ▸ Apps.
+It uses the WebView2 runtime that Windows 10 and 11 already have (it downloads it if missing). It is built
 for `x86_64-pc-windows-gnu` like the server, so it carries `WebView2Loader.dll` next to
 `vesper-oriel.exe` (Tauri's bundler adds it); the C runtimes are linked statically. The shell's
 library is built as an `rlib` only: the template's `cdylib` (for Android/iOS) can't link for
@@ -415,11 +424,16 @@ PowerPoint import (any real deck with a chart or a table in it):
 
 Oriel (`Vesper Oriel_<version>_x64-setup.exe`):
 
-1. Run the installer (SmartScreen: More info → Run anyway); no administrator prompt.
-2. Start "Vesper Oriel" from the Start menu: the window opens.
+1. Run the installer (SmartScreen: More info → Run anyway); it asks for an administrator and
+   installs in `C:\Program Files\Vesper Oriel`.
+2. Start "Vesper Oriel" from the Start menu: the window opens. Sign in as another (standard)
+   account: "Vesper Oriel" is in its Start menu too and opens.
 3. The connect screen lists the servers on the LAN; connect and pair; the library, slide grid
    and live view work; click a slide to go live.
-4. Uninstall from Settings ▸ Apps.
+4. Over an earlier per-user test install (`%LOCALAPPDATA%\Vesper Oriel`, same account): after
+   the install it is gone (folder, Start menu entry, Settings ▸ Apps entry), only one
+   "Vesper Oriel" is listed, and the saved servers are still there.
+5. Uninstall from Settings ▸ Apps (as an administrator).
 
 ## Vesper Launcher
 
@@ -428,16 +442,21 @@ machine, acts on its role (presentation server, display box) and runs IDN's diag
 
 **Linux:** its own package, `vesper-launcher`, which the server's package depends on; alone it
 makes a display box or a control PC (`apt install ./vesper-launcher_*.deb ./vesper-idn-node_*.deb`).
-`vesper-launcher.service` runs as root (it runs `dpkg -i` and starts and stops the products'
-units), with `KillMode=process` so an install it started finishes even if the Launcher itself is
-stopped meanwhile (the Launcher waits for that dpkg at its next start). The package enables it on
+`vesper-launcher.service` runs as root (it installs packages with apt and starts and stops the
+products' units), with `KillMode=process` so an install it started finishes even if the Launcher itself is
+stopped meanwhile (the Launcher waits for that install at its next start). The package enables it on
 first install and starts it on every install, upgrade and reinstall (an admin's disable is kept),
 but never restarts it: an update from the site's channel restarts it through its self-update
 helper (a transient `systemd-run` unit that installs, restarts, checks the new version and goes
 back to the kept one when it doesn't come up); after an upgrade by hand, `systemctl restart
-vesper-launcher`. The Launcher installs with `dpkg --force-confdef --force-confold -i`: an edited
-`/etc/default/vesper` or `/etc/vesper/launcher.json` is kept, and a changed default from the
-package is left beside it as `*.dpkg-dist`. Revision 2 of the packages moved the Launcher out of
+vesper-launcher`. The Launcher installs with `apt-get install -y -q --allow-downgrades --no-remove
+-o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold ./<package>.deb`
+(`DEBIAN_FRONTEND=noninteractive`, `NEEDRESTART_SUSPEND=1`): the system packages it needs come
+along from the machine's repositories (apt's lists are refreshed once when one can't be found
+or fetched), a rollback may install an older version, apt never removes a package (it stops and
+the install fails with apt's reason), an edited `/etc/default/vesper` or
+`/etc/vesper/launcher.json` is kept, and a changed default from the package is left beside it
+as `*.dpkg-dist`. Revision 2 of the packages moved the Launcher out of
 `vesper` (`Replaces`/`Breaks: vesper (<< 0.1.0-2)`): upgrading from revision 1 installs both.
 The released revision 1 (`vesper_0.1.0-1`) has no Launcher, so such a machine is upgraded by hand once
 (`apt install ./vesper_*.deb ./vesper-launcher_*.deb ./vesper-idn-node_*.deb`); from then on the
@@ -445,8 +464,11 @@ Launcher updates it from the site's channel. `vesper` needs `vesper-launcher (>=
 oldest Launcher it works with, never the Launcher's own newest version, so a server update never
 waits for a Launcher update. When a product's package needs another product of the Launcher's at
 a newer version than installed (its `Depends`), the Launcher downloads the newest one meeting it
-from the channel and installs both in one `dpkg -i` (refused, saying what it needs, when the
-channel has none).
+from the channel and installs both in one apt run (refused, saying what it needs, when the
+channel has none). Versions for the first release: the Launcher (and its tray) 0.1.1, every
+other product 0.1.0. The bundled IDN Node's package `Breaks: vesper-launcher (<< 0.1.1)`
+(`idn_min_launcher` in `build-deb.sh`): under an older Launcher dpkg refuses it, so the Launcher
+is updated first (by hand, `apt install` both packages together: apt orders them).
 
 **Products** come from `/etc/vesper/launcher.json` (the Launcher itself) and
 `/etc/vesper/launcher.d/*.json`, one product per file, which each product's package installs (the
@@ -578,7 +600,7 @@ has its minisign signature beside it (`<file>.minisig`), made with the **automat
 (A05D75D53CB6819A, public half `packaging/keys/vesper-automation.pub`, compiled into the
 Launcher's and the server's trusted keys) and the trusted comment the Launcher checks:
 `vesper-package product=<product> version=<version> platform=<platform>`. The IDN Node's version
-is its package's (`0.3.8~beta18`); its tag spells the `~` as `-` (`idn-node-v0.3.8-beta18`), which
+is its package's (`0.3.8~beta21`); its tag spells the `~` as `-` (`idn-node-v0.3.8-beta21`), which
 git allows. Each release also has `manifest.json`: the product, version and channel, and per
 asset its signed product, platform, file name, size and SHA-256.
 

@@ -58,7 +58,7 @@ class Shell {
   /** The ChordPro dialog (batch 16): import a song, or add a ChordPro file's chords to one. */
   chordPro = $state.raw<{ mode: "import" } | { mode: "apply"; presentation: string } | null>(null);
   /** The SongSelect import dialog (files, or pasted lyrics: `text` from Reflow's smart paste). */
-  songSelect = $state.raw<{ text?: string } | null>(null);
+  songSelect = $state.raw<{ text?: string; files?: { name: string; data: string }[] } | null>(null);
   /** Where to go once the Screens page's unsaved changes are settled. */
   private pending: Route | null = null;
 

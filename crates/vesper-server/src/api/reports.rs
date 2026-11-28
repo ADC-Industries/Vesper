@@ -1,13 +1,88 @@
-//! Reports: CCLI song usage ([`crate::ccli`]).
+//! Reports: CCLI song usage ([`crate::ccli`]); Settings ▸ CCLI, the church's licence and
+//! where the copyright line shows (the show settings' `ccli`).
 
 use super::*;
 use axum::extract::Query;
-use protocol::CcliReport;
+use protocol::{CcliLicense, CcliLicenseStatus, CcliReport};
 
 pub(super) fn routes() -> Router<AppState> {
     Router::new()
         .route("/reports/ccli", get(ccli))
         .route("/reports/ccli.csv", get(ccli_csv))
+        .route("/settings/ccli", get(ccli_settings).put(put_ccli_settings))
+}
+
+/// The CCLI part of the show settings Settings ▸ CCLI edits, and the imported licence number.
+async fn license_status(app: &AppState) -> CcliLicenseStatus {
+    let data = app.shared.data();
+    let c = &data.settings.ccli;
+    let sh = app.shared.clone();
+    let imported = tokio::task::spawn_blocking(move || sh.ccli.imported_license())
+        .await
+        .ok()
+        .flatten();
+    CcliLicenseStatus {
+        settings: CcliLicense {
+            license_number: c.license_number.clone(),
+            enabled: c.enabled,
+            show_on: c.show_on,
+        },
+        imported_license: imported,
+    }
+}
+
+async fn ccli_settings(State(app): State<AppState>) -> ApiResult<CcliLicenseStatus> {
+    ok(license_status(&app).await)
+}
+
+/// `PUT /settings/ccli` (admins): the licence number, the line on or off and its slides; the
+/// line's layout and template stay.
+async fn put_ccli_settings(
+    State(app): State<AppState>,
+    axum::Extension(access): axum::Extension<Access>,
+    axum::Extension(peer): axum::Extension<SocketAddr>,
+    body: Bytes,
+) -> ApiResult<CcliLicenseStatus> {
+    let put: CcliLicense = parse_body(&body)?;
+    let detail = serde_json::to_value(&put).unwrap_or_default();
+    let actor = crate::codex::api::admin(&app, &access, peer, "settings.ccli", &detail).await?;
+    let license = match put.license_number.as_deref().map(str::trim) {
+        None | Some("") => None,
+        Some(n) if n.chars().count() > crate::ccli::MAX_LICENSE => {
+            return Err(Error(ApiError::invalid(
+                "licenseNumber",
+                "at most 40 characters",
+            )));
+        }
+        Some(n) if n.chars().any(char::is_control) => {
+            return Err(Error(ApiError::invalid(
+                "licenseNumber",
+                "one line of text",
+            )));
+        }
+        Some(n) => Some(n.to_string()),
+    };
+    if put.show_on == model::CcliDisplay::Unknown {
+        return Err(Error(ApiError::invalid(
+            "showOn",
+            "firstSlide, lastSlide, firstAndLast or allSlides",
+        )));
+    }
+    let mut settings = (*app.shared.data().settings).clone();
+    settings.ccli.license_number = license;
+    settings.ccli.enabled = put.enabled;
+    settings.ccli.show_on = put.show_on;
+    let r = app.show.settings(settings).await;
+    crate::codex::api::audit(
+        &app,
+        &actor,
+        "settings.ccli",
+        detail,
+        r.as_ref().err().map(|e| e.message.clone()),
+    )
+    .await;
+    r.map_err(Error)?;
+    ok(license_status(&app).await)
 }
 
 #[derive(serde::Deserialize)]

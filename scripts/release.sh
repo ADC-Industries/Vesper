@@ -82,7 +82,7 @@ case "$product" in
   idn-node)
     name="IDN Node (bundled)"
     idn_tag="$(sed -n 's/.*idn-open-protocol", tag = "\([^"]*\)".*/\1/p' "$root/crates/audio/Cargo.toml" | head -n1)"
-    # v0.3.8-Beta18 → 0.3.8~beta18, as build-deb.sh names the package.
+    # v0.3.8-Beta21 → 0.3.8~beta21, as build-deb.sh names the package.
     want="$(printf '%s' "${idn_tag#v}" | sed 's/-\(.*\)$/~\1/' | tr '[:upper:]' '[:lower:]')"
     version="$(printf '%s' "$version" | sed 's/-/~/' | tr '[:upper:]' '[:lower:]')"
     ;;
