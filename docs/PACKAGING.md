@@ -601,7 +601,10 @@ has its minisign signature beside it (`<file>.minisig`), made with the **automat
 Launcher's and the server's trusted keys) and the trusted comment the Launcher checks:
 `vesper-package product=<product> version=<version> platform=<platform>`. The IDN Node's version
 is its package's (`0.3.8~beta21`); its tag spells the `~` as `-` (`idn-node-v0.3.8-beta21`), which
-git allows. Each release also has `manifest.json`: the product, version and channel, and per
+git allows, and its file is published as `vesper-idn-node_0.3.8.beta21-1_amd64.deb`: GitHub renames
+an asset with a `~` (or a space) in its name, and the checkers find files by the manifest's names,
+so `scripts/release.sh` publishes GitHub's spelling and refuses any other name GitHub would change.
+Each release also has `manifest.json`: the product, version and channel, and per
 asset its signed product, platform, file name, size and SHA-256.
 
 **Making a release** (on the build machine that holds the automation key):

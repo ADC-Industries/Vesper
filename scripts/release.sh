@@ -115,8 +115,12 @@ arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
 linux="$(arch_platform "$arch")"
 assets=()
 add_deb() { # $1: package name, $2: signed product
-  local f; f="$(newest_deb "$1_$version")"
-  assets+=("$f|$(basename "$f")|$2|$linux")
+  local f name; f="$(newest_deb "$1_$version")"
+  # GitHub renames an asset with a "~" in its name (0.3.8~beta21 → 0.3.8.beta21), and the
+  # checkers look files up by the manifest's names: publish it under GitHub's spelling. apt
+  # takes the version from inside the package, the signature's comment keeps the real one.
+  name="$(basename "$f")"; name="${name//\~/.}"
+  assets+=("$f|$name|$2|$linux")
 }
 case "$product" in
   server)
@@ -137,6 +141,9 @@ esac
 for a in "${assets[@]}"; do
   f="${a%%|*}"
   [[ -f "$f" ]] || { echo "missing $f (build first, or drop --no-build)" >&2; exit 1; }
+  IFS='|' read -r _ file _ _ <<< "$a"
+  # Only names GitHub keeps as they are (it renames others, and the manifest would be wrong).
+  [[ "$file" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "\"$file\" would be renamed by GitHub" >&2; exit 1; }
 done
 
 command -v "$minisign" > /dev/null || { echo "minisign not found ($minisign)" >&2; exit 1; }
